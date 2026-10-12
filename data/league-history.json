@@ -1,0 +1,19 @@
+{
+  "allTimeStats": [
+    { "owner": "Diriye", "points": 27, "wins": 1913, "winPct": ".502", "rings": 1, "gamesPlayed": 424 },
+    { "owner": "James", "points": 26, "wins": 1959, "winPct": ".515", "rings": 2, "gamesPlayed": 420 },
+    { "owner": "Jash", "points": 25, "wins": 1928, "winPct": ".508", "rings": 2, "gamesPlayed": 414 },
+    { "owner": "Jack", "points": 22, "wins": 1878, "winPct": ".493", "rings": 1, "gamesPlayed": 426 },
+    { "owner": "Karthik", "points": 18, "wins": 1841, "winPct": ".482", "rings": 2, "gamesPlayed": 434 }
+  ],
+  "yearlyFinish": [
+    { "season": "2018-19", "first": "James", "second": "Diriye", "third": "Karthik", "fourth": "Jack", "fifth": "Jash" },
+    { "season": "2019-20", "first": "Karthik", "second": "James", "third": "Diriye", "fourth": "Jack", "fifth": "Jash" },
+    { "season": "2020-21", "first": "Jash", "second": "Jack", "third": "Diriye", "fourth": "James", "fifth": "Karthik" },
+    { "season": "2021-22", "first": "Jash", "second": "Diriye", "third": "James", "fourth": "Jack", "fifth": "Karthik" },
+    { "season": "2022-23", "first": "Jack", "second": "Diriye", "third": "James", "fourth": "Jash", "fifth": "Karthik" },
+    { "season": "2023-24", "first": "Diriye", "second": "Jash", "third": "James", "fourth": "Jack", "fifth": "Karthik" },
+    { "season": "2024-25", "first": "Karthik", "second": "Jack", "third": "Jash", "fourth": "Diriye", "fifth": "James" },
+    { "season": "2025-26", "first": "James", "second": "Jash", "third": "Jack", "fourth": "Diriye", "fifth": "Karthik" }
+  ]
+}

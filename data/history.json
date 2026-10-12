@@ -1,0 +1,34 @@
+[
+  {
+    "date": "Oct 10",
+    "Karthik": 0,
+    "James": 0,
+    "Diriye": 0,
+    "Jack": 0,
+    "Jash": 0
+  },
+  {
+    "date": "Oct 11",
+    "Karthik": 5,
+    "James": 4,
+    "Diriye": 3,
+    "Jack": 2,
+    "Jash": 1
+  },
+  {
+    "date": "Oct 12",
+    "Karthik": 4,
+    "James": 9,
+    "Diriye": 6,
+    "Jack": 9,
+    "Jash": 8
+  },
+  {
+    "date": "Oct 12",
+    "Karthik": 4,
+    "James": 9,
+    "Diriye": 6,
+    "Jack": 9,
+    "Jash": 8
+  }
+]
