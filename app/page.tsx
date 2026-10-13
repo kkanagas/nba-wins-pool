@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
-import { Trophy, TrendingUp, Shield, ArrowUpDown, RefreshCw, History, Calendar, LayoutDashboard, Dices } from 'lucide-react';
+import { Trophy, TrendingUp, Shield, ArrowUpDown, RefreshCw, History, Calendar, LayoutDashboard, Dices, PlayCircle } from 'lucide-react';
 import DraftLottery from '@/components/DraftLottery';
+import DraftInterface, { PickRecord } from '@/components/DraftInterface';
 
 const OWNER_AVATARS: Record<string, string> = {
   Karthik: '/avatars/karthik.png',
@@ -87,7 +88,7 @@ const TEAM_COLORS: Record<string, { bg: string; text: string; border: string }> 
   Washington: { bg: 'bg-blue-950/90', text: 'text-red-300', border: 'border-blue-700/50' },
 };
 
-const BASE_ROSTERS = [
+const DEFAULT_ROSTERS = [
   { draftOrder: 1, owner: 'Karthik', teamNames: ['Celtics', 'Thunder', 'Knicks', 'Kings', 'Magic', 'Bulls'] },
   { draftOrder: 2, owner: 'James', teamNames: ['Nuggets', 'Bucks', 'Lakers', 'Pacers', 'Heat', 'Rockets'] },
   { draftOrder: 3, owner: 'Diriye', teamNames: ['Cavaliers', 'Suns', 'Mavericks', 'Timberwolves', 'Pelicans', 'Spurs'] },
@@ -95,7 +96,7 @@ const BASE_ROSTERS = [
   { draftOrder: 5, owner: 'Jash', teamNames: ['Pistons', 'Nets', 'Jazz', 'Trail Blazers', 'Hornets', 'Wizards'] },
 ];
 
-type TabType = 'live' | 'lottery' | 'leagueHistory' | 'draftHistory' | 'pastSeasons';
+type TabType = 'live' | 'draftTab' | 'lottery' | 'leagueHistory' | 'draftHistory' | 'pastSeasons';
 type SortField = 'draftOrder' | 'owner' | 'rd1' | 'rd2' | 'rd3' | 'rd4' | 'rd5' | 'rd6' | 'totalWins' | 'winPct' | 'winsRank' | 'pctRank';
 type HistorySortField = 'owner' | 'points' | 'wins' | 'winPct' | 'rings';
 type ChartType = 'wins' | 'winsRank' | 'winPct' | 'winPctRank';
@@ -109,6 +110,15 @@ export default function Dashboard() {
   const [historySortField, setHistorySortField] = useState<HistorySortField>('points');
   const [historySortAsc, setHistorySortAsc] = useState<boolean>(false);
 
+  const [draftSortField, setDraftSortField] = useState<string>('team');
+  const [draftSortAsc, setDraftSortAsc] = useState<boolean>(true);
+
+  const [seasonMatrixSortField, setSeasonMatrixSortField] = useState<string>('team');
+  const [seasonMatrixSortAsc, setSeasonMatrixSortAsc] = useState<boolean>(true);
+
+  const [pastSortField, setPastSortField] = useState<string>('finish');
+  const [pastSortAsc, setPastSortAsc] = useState<boolean>(true);
+
   const [liveWins, setLiveWins] = useState<Record<string, number>>({});
   const [liveLosses, setLiveLosses] = useState<Record<string, number>>({});
   const [history, setHistory] = useState<any[]>([]);
@@ -117,7 +127,92 @@ export default function Dashboard() {
 
   const [leagueHistoryData, setLeagueHistoryData] = useState<any>({});
   const [draftHistoryData, setDraftHistoryData] = useState<any[]>([]);
-  const [pastSeasonsData, setPastSeasonsData] = useState<any>({});
+
+  const [currentRosters, setCurrentRosters] = useState(DEFAULT_ROSTERS);
+
+  // Lifted Draft & Lottery Persistent State
+  const [activeDraftOrder, setActiveDraftOrder] = useState<string[]>(['Karthik', 'James', 'Diriye', 'Jack', 'Jash']);
+  const [persistentDraftPicks, setPersistentDraftPicks] = useState<PickRecord[]>([]);
+
+  // Lifted Lottery State
+  const [lotteryState, setLotteryState] = useState<{
+    drumPool: any[];
+    stage: 'idle' | 'drawing' | 'selecting' | 'complete';
+    drawnQueue: any[];
+    currentPickerIndex: number;
+    availableSlots: number[];
+    slotAssignments: { [ownerId: string]: number };
+    lastDrawnOwner: any | null;
+    isLocked: boolean;
+  }>({
+    drumPool: [],
+    stage: 'idle',
+    drawnQueue: [],
+    currentPickerIndex: 0,
+    availableSlots: [1, 2, 3, 4, 5],
+    slotAssignments: {},
+    lastDrawnOwner: null,
+    isLocked: false,
+  });
+
+  const [pastSeasonsData, setPastSeasonsData] = useState<any>({
+    "2025-26": [
+      { "draftOrder": 1, "owner": "Jack", "teams": [{ "name": "Oklahoma City", "wins": 64 }, { "name": "Detroit", "wins": 60 }, { "name": "Golden State", "wins": 37 }, { "name": "Chicago", "wins": 31 }, { "name": "Portland", "wins": 42 }, { "name": "Washington", "wins": 17 }], "totalWins": 251, "winPct": ".510" },
+      { "draftOrder": 2, "owner": "Jash", "teams": [{ "name": "Cleveland", "wins": 52 }, { "name": "LA Clippers", "wins": 42 }, { "name": "LA Lakers", "wins": 53 }, { "name": "Philadelphia", "wins": 45 }, { "name": "Boston", "wins": 56 }, { "name": "Utah", "wins": 22 }], "totalWins": 270, "winPct": ".549" },
+      { "draftOrder": 3, "owner": "Diriye", "teams": [{ "name": "Denver", "wins": 54 }, { "name": "Atlanta", "wins": 46 }, { "name": "Milwaukee", "wins": 32 }, { "name": "New Orleans", "wins": 26 }, { "name": "Charlotte", "wins": 44 }, { "name": "Brooklyn", "wins": 20 }], "totalWins": 222, "winPct": ".451" },
+      { "draftOrder": 4, "owner": "James", "teams": [{ "name": "New York", "wins": 53 }, { "name": "Orlando", "wins": 45 }, { "name": "San Antonio", "wins": 62 }, { "name": "Toronto", "wins": 46 }, { "name": "Miami", "wins": 43 }, { "name": "Phoenix", "wins": 45 }], "totalWins": 294, "winPct": ".598" },
+      { "draftOrder": 5, "owner": "Karthik", "teams": [{ "name": "Houston", "wins": 52 }, { "name": "Minnesota", "wins": 49 }, { "name": "Dallas", "wins": 26 }, { "name": "Memphis", "wins": 25 }, { "name": "Indiana", "wins": 19 }, { "name": "Sacramento", "wins": 22 }], "totalWins": 193, "winPct": ".392" }
+    ],
+    "2024-25": [
+      { "draftOrder": 1, "owner": "James", "teams": [{ "name": "Boston", "wins": 61 }, { "name": "Phoenix", "wins": 36 }, { "name": "New Orleans", "wins": 21 }, { "name": "San Antonio", "wins": 34 }, { "name": "LA Clippers", "wins": 50 }, { "name": "Washington", "wins": 18 }], "totalWins": 220, "winPct": ".447" },
+      { "draftOrder": 2, "owner": "Karthik", "teams": [{ "name": "Oklahoma City", "wins": 68 }, { "name": "Milwaukee", "wins": 48 }, { "name": "Cleveland", "wins": 64 }, { "name": "Miami", "wins": 37 }, { "name": "Atlanta", "wins": 40 }, { "name": "Portland", "wins": 36 }], "totalWins": 293, "winPct": ".596" },
+      { "draftOrder": 3, "owner": "Jack", "teams": [{ "name": "Minnesota", "wins": 49 }, { "name": "Memphis", "wins": 48 }, { "name": "Orlando", "wins": 41 }, { "name": "Houston", "wins": 52 }, { "name": "Detroit", "wins": 44 }, { "name": "Utah", "wins": 17 }], "totalWins": 251, "winPct": ".510" },
+      { "draftOrder": 4, "owner": "Diriye", "teams": [{ "name": "New York", "wins": 51 }, { "name": "Philadelphia", "wins": 24 }, { "name": "Indiana", "wins": 50 }, { "name": "Golden State", "wins": 48 }, { "name": "Toronto", "wins": 30 }, { "name": "Brooklyn", "wins": 26 }], "totalWins": 229, "winPct": ".465" },
+      { "draftOrder": 5, "owner": "Jash", "teams": [{ "name": "Dallas", "wins": 39 }, { "name": "Denver", "wins": 50 }, { "name": "Sacramento", "wins": 40 }, { "name": "LA Lakers", "wins": 50 }, { "name": "Chicago", "wins": 39 }, { "name": "Charlotte", "wins": 19 }], "totalWins": 237, "winPct": ".482" }
+    ],
+    "2023-24": [
+      { "draftOrder": 1, "owner": "Jack", "teams": [{ "name": "Milwaukee", "wins": 49 }, { "name": "New York", "wins": 50 }, { "name": "Minnesota", "wins": 56 }, { "name": "Charlotte", "wins": 21 }, { "name": "Houston", "wins": 41 }, { "name": "Washington", "wins": 15 }], "totalWins": 232, "winPct": ".472" },
+      { "draftOrder": 2, "owner": "Jash", "teams": [{ "name": "Denver", "wins": 57 }, { "name": "Golden State", "wins": 46 }, { "name": "Dallas", "wins": 50 }, { "name": "Oklahoma City", "wins": 57 }, { "name": "Atlanta", "wins": 36 }, { "name": "Detroit", "wins": 14 }], "totalWins": 260, "winPct": ".528" },
+      { "draftOrder": 3, "owner": "Diriye", "teams": [{ "name": "Phoenix", "wins": 49 }, { "name": "LA Lakers", "wins": 47 }, { "name": "New Orleans", "wins": 49 }, { "name": "Indiana", "wins": 47 }, { "name": "Orlando", "wins": 47 }, { "name": "San Antonio", "wins": 22 }], "totalWins": 261, "winPct": ".530" },
+      { "draftOrder": 4, "owner": "James", "teams": [{ "name": "Boston", "wins": 64 }, { "name": "Memphis", "wins": 27 }, { "name": "Sacramento", "wins": 46 }, { "name": "LA Clippers", "wins": 51 }, { "name": "Chicago", "wins": 39 }, { "name": "Portland", "wins": 21 }], "totalWins": 248, "winPct": ".504" },
+      { "draftOrder": 5, "owner": "Karthik", "teams": [{ "name": "Cleveland", "wins": 48 }, { "name": "Philadelphia", "wins": 47 }, { "name": "Toronto", "wins": 25 }, { "name": "Miami", "wins": 46 }, { "name": "Brooklyn", "wins": 32 }, { "name": "Utah", "wins": 31 }], "totalWins": 229, "winPct": ".465" }
+    ],
+    "2022-23": [
+      { "draftOrder": 1, "owner": "James", "teams": [{ "name": "Denver", "wins": 53 }, { "name": "Dallas", "wins": 38 }, { "name": "Toronto", "wins": 41 }, { "name": "Charlotte", "wins": 27 }, { "name": "New York", "wins": 47 }, { "name": "Oklahoma City", "wins": 40 }], "totalWins": 246, "winPct": ".500" },
+      { "draftOrder": 2, "owner": "Jack", "teams": [{ "name": "Milwaukee", "wins": 58 }, { "name": "Miami", "wins": 44 }, { "name": "Cleveland", "wins": 51 }, { "name": "Portland", "wins": 33 }, { "name": "Sacramento", "wins": 48 }, { "name": "San Antonio", "wins": 22 }], "totalWins": 256, "winPct": ".520" },
+      { "draftOrder": 3, "owner": "Diriye", "teams": [{ "name": "Philadelphia", "wins": 54 }, { "name": "Memphis", "wins": 51 }, { "name": "Phoenix", "wins": 45 }, { "name": "LA Lakers", "wins": 43 }, { "name": "Washington", "wins": 35 }, { "name": "Houston", "wins": 22 }], "totalWins": 250, "winPct": ".508" },
+      { "draftOrder": 4, "owner": "Jash", "teams": [{ "name": "Golden State", "wins": 44 }, { "name": "New Orleans", "wins": 42 }, { "name": "Brooklyn", "wins": 45 }, { "name": "Chicago", "wins": 40 }, { "name": "Orlando", "wins": 34 }, { "name": "Indiana", "wins": 35 }], "totalWins": 240, "winPct": ".488" },
+      { "draftOrder": 5, "owner": "Karthik", "teams": [{ "name": "LA Clippers", "wins": 44 }, { "name": "Boston", "wins": 57 }, { "name": "Minnesota", "wins": 42 }, { "name": "Atlanta", "wins": 41 }, { "name": "Detroit", "wins": 17 }, { "name": "Utah", "wins": 37 }], "totalWins": 238, "winPct": ".484" }
+    ],
+    "2021-22": [
+      { "draftOrder": 1, "owner": "James", "teams": [{ "name": "Milwaukee", "wins": 51 }, { "name": "Miami", "wins": 53 }, { "name": "Boston", "wins": 51 }, { "name": "Indiana", "wins": 25 }, { "name": "New York", "wins": 37 }, { "name": "Oklahoma City", "wins": 24 }], "totalWins": 241, "winPct": ".490" },
+      { "draftOrder": 2, "owner": "Karthik", "teams": [{ "name": "Brooklyn", "wins": 44 }, { "name": "Denver", "wins": 48 }, { "name": "Portland", "wins": 27 }, { "name": "New Orleans", "wins": 36 }, { "name": "Minnesota", "wins": 46 }, { "name": "Houston", "wins": 20 }], "totalWins": 221, "winPct": ".449" },
+      { "draftOrder": 3, "owner": "Jash", "teams": [{ "name": "Phoenix", "wins": 64 }, { "name": "Dallas", "wins": 52 }, { "name": "Golden State", "wins": 53 }, { "name": "Memphis", "wins": 56 }, { "name": "Washington", "wins": 35 }, { "name": "Orlando", "wins": 22 }], "totalWins": 282, "winPct": ".573" },
+      { "draftOrder": 4, "owner": "Diriye", "teams": [{ "name": "Utah", "wins": 49 }, { "name": "Atlanta", "wins": 43 }, { "name": "LA Clippers", "wins": 42 }, { "name": "Toronto", "wins": 48 }, { "name": "Sacramento", "wins": 30 }, { "name": "Cleveland", "wins": 44 }], "totalWins": 256, "winPct": ".520" },
+      { "draftOrder": 5, "owner": "Jack", "teams": [{ "name": "Philadelphia", "wins": 51 }, { "name": "LA Lakers", "wins": 33 }, { "name": "Chicago", "wins": 46 }, { "name": "Charlotte", "wins": 43 }, { "name": "San Antonio", "wins": 34 }, { "name": "Detroit", "wins": 23 }], "totalWins": 230, "winPct": ".467" }
+    ],
+    "2020-21": [
+      { "draftOrder": 1, "owner": "Jash", "teams": [{ "name": "LA Lakers", "wins": 42 }, { "name": "Utah", "wins": 52 }, { "name": "Brooklyn", "wins": 48 }, { "name": "Atlanta", "wins": 41 }, { "name": "San Antonio", "wins": 33 }, { "name": "Cleveland", "wins": 22 }], "totalWins": 238, "winPct": ".551" },
+      { "draftOrder": 2, "owner": "Jack", "teams": [{ "name": "Milwaukee", "wins": 46 }, { "name": "Boston", "wins": 36 }, { "name": "Portland", "wins": 42 }, { "name": "Memphis", "wins": 38 }, { "name": "Washington", "wins": 34 }, { "name": "New York", "wins": 41 }], "totalWins": 237, "winPct": ".549" },
+      { "draftOrder": 3, "owner": "Diriye", "teams": [{ "name": "Denver", "wins": 47 }, { "name": "Philadelphia", "wins": 49 }, { "name": "Phoenix", "wins": 51 }, { "name": "Minnesota", "wins": 23 }, { "name": "Charlotte", "wins": 33 }, { "name": "Detroit", "wins": 20 }], "totalWins": 223, "winPct": ".516" },
+      { "draftOrder": 4, "owner": "Karthik", "teams": [{ "name": "LA Clippers", "wins": 47 }, { "name": "Dallas", "wins": 42 }, { "name": "Houston", "wins": 17 }, { "name": "New Orleans", "wins": 31 }, { "name": "Orlando", "wins": 21 }, { "name": "Oklahoma City", "wins": 22 }], "totalWins": 180, "winPct": ".417" },
+      { "draftOrder": 5, "owner": "James", "teams": [{ "name": "Toronto", "wins": 27 }, { "name": "Miami", "wins": 40 }, { "name": "Indiana", "wins": 34 }, { "name": "Golden State", "wins": 39 }, { "name": "Sacramento", "wins": 31 }, { "name": "Chicago", "wins": 31 }], "totalWins": 202, "winPct": ".468" }
+    ],
+    "2019-20": [
+      { "draftOrder": 1, "owner": "Diriye", "teams": [{ "name": "Milwaukee", "wins": 56 }, { "name": "Portland", "wins": 35 }, { "name": "Orlando", "wins": 33 }, { "name": "Sacramento", "wins": 31 }, { "name": "Atlanta", "wins": 20 }, { "name": "Charlotte", "wins": 23 }], "totalWins": 198, "winPct": ".467" },
+      { "draftOrder": 2, "owner": "Jash", "teams": [{ "name": "Houston", "wins": 44 }, { "name": "Golden State", "wins": 15 }, { "name": "Boston", "wins": 48 }, { "name": "Indiana", "wins": 45 }, { "name": "Detroit", "wins": 20 }, { "name": "New York", "wins": 21 }], "totalWins": 193, "winPct": ".466" },
+      { "draftOrder": 3, "owner": "James", "teams": [{ "name": "LA Clippers", "wins": 49 }, { "name": "Toronto", "wins": 53 }, { "name": "Dallas", "wins": 43 }, { "name": "Oklahoma City", "wins": 44 }, { "name": "Minnesota", "wins": 19 }, { "name": "Cleveland", "wins": 19 }], "totalWins": 227, "winPct": ".540" },
+      { "draftOrder": 4, "owner": "Jack", "teams": [{ "name": "Philadelphia", "wins": 43 }, { "name": "Utah", "wins": 44 }, { "name": "Brooklyn", "wins": 35 }, { "name": "San Antonio", "wins": 32 }, { "name": "Chicago", "wins": 22 }, { "name": "Memphis", "wins": 34 }], "totalWins": 210, "winPct": ".493" },
+      { "draftOrder": 5, "owner": "Karthik", "teams": [{ "name": "Denver", "wins": 46 }, { "name": "LA Lakers", "wins": 52 }, { "name": "Miami", "wins": 44 }, { "name": "New Orleans", "wins": 30 }, { "name": "Phoenix", "wins": 34 }, { "name": "Washington", "wins": 25 }], "totalWins": 231, "winPct": ".532" }
+    ],
+    "2018-19": [
+      { "draftOrder": 1, "owner": "Diriye", "teams": [{ "name": "Toronto", "wins": 58 }, { "name": "Indiana", "wins": 48 }, { "name": "LA Lakers", "wins": 37 }, { "name": "LA Clippers", "wins": 48 }, { "name": "Brooklyn", "wins": 42 }, { "name": "Atlanta", "wins": 29 }], "totalWins": 262, "winPct": ".533" },
+      { "draftOrder": 2, "owner": "James", "teams": [{ "name": "Golden State", "wins": 57 }, { "name": "Milwaukee", "wins": 60 }, { "name": "Portland", "wins": 53 }, { "name": "Charlotte", "wins": 39 }, { "name": "Dallas", "wins": 33 }, { "name": "Sacramento", "wins": 39 }], "totalWins": 281, "winPct": ".571" },
+      { "draftOrder": 3, "owner": "Karthik", "teams": [{ "name": "Houston", "wins": 53 }, { "name": "Denver", "wins": 54 }, { "name": "New Orleans", "wins": 33 }, { "name": "Detroit", "wins": 41 }, { "name": "Memphis", "wins": 33 }, { "name": "Orlando", "wins": 42 }], "totalWins": 256, "winPct": ".520" },
+      { "draftOrder": 4, "owner": "Jack", "teams": [{ "name": "Boston", "wins": 49 }, { "name": "Oklahoma City", "wins": 49 }, { "name": "San Antonio", "wins": 48 }, { "name": "Minnesota", "wins": 36 }, { "name": "Chicago", "wins": 22 }, { "name": "Phoenix", "wins": 19 }], "totalWins": 223, "winPct": ".453" },
+      { "draftOrder": 5, "owner": "Jash", "teams": [{ "name": "Utah", "wins": 50 }, { "name": "Philadelphia", "wins": 51 }, { "name": "Washington", "wins": 32 }, { "name": "Miami", "wins": 39 }, { "name": "Cleveland", "wins": 19 }, { "name": "New York", "wins": 17 }], "totalWins": 208, "winPct": ".423" }
+    ]
+  });
   const [selectedSeason, setSelectedSeason] = useState<string>('2025-26');
 
   const recordDailySnapshot = async (currentWins: Record<string, number>, currentLosses: Record<string, number>) => {
@@ -135,7 +230,7 @@ export default function Dashboard() {
       }
 
       const snapshot: Record<string, any> = { date: todayStr };
-      BASE_ROSTERS.forEach((roster) => {
+      currentRosters.forEach((roster) => {
         const ownerWins = roster.teamNames.reduce((acc, name) => acc + (currentWins[name] || 0), 0);
         const ownerLosses = roster.teamNames.reduce((acc, name) => acc + (currentLosses[name] || 0), 0);
         snapshot[roster.owner] = ownerWins;
@@ -181,9 +276,8 @@ export default function Dashboard() {
       if (data.success) {
         setLeagueHistoryData(data.leagueHistory || {});
         setDraftHistoryData(data.draftHistory || []);
-        setPastSeasonsData(data.pastSeasons || {});
         if (data.pastSeasons && Object.keys(data.pastSeasons).length > 0) {
-          setSelectedSeason(Object.keys(data.pastSeasons)[0]);
+          setPastSeasonsData((prev: any) => ({ ...data.pastSeasons, ...prev }));
         }
       }
     } catch (err) {
@@ -196,7 +290,17 @@ export default function Dashboard() {
     fetchHistoricalData();
   }, []);
 
-  const standingsData = BASE_ROSTERS.map((roster) => {
+  const handleFinalizeDraftRosters = (rosterMap: Record<string, string[]>) => {
+    const updated = activeDraftOrder.map((owner, idx) => ({
+      draftOrder: idx + 1,
+      owner,
+      teamNames: rosterMap[owner] || [],
+    }));
+    setCurrentRosters(updated);
+    setActiveTab('live');
+  };
+
+  const standingsData = currentRosters.map((roster) => {
     const rounds = roster.teamNames.map((name) => {
       const wins = liveWins[name] !== undefined ? liveWins[name] : 0;
       const losses = liveLosses[name] !== undefined ? liveLosses[name] : 0;
@@ -237,7 +341,7 @@ export default function Dashboard() {
 
   const historyWithRanks = deduplicatedHistory.map((entry) => {
     const entryCopy = { ...entry };
-    const ownersList = BASE_ROSTERS.map((r) => r.owner);
+    const ownersList = currentRosters.map((r) => r.owner);
     
     ownersList.forEach((owner) => {
       const wins = entry[owner] || 0;
@@ -276,12 +380,12 @@ export default function Dashboard() {
 
     if (sortField === 'draftOrder') { aVal = a.draftOrder; bVal = b.draftOrder; }
     else if (sortField === 'owner') { aVal = a.owner; bVal = b.owner; }
-    else if (sortField === 'rd1') { aVal = a.rounds[0].wins; bVal = b.rounds[0].wins; }
-    else if (sortField === 'rd2') { aVal = a.rounds[1].wins; bVal = b.rounds[1].wins; }
-    else if (sortField === 'rd3') { aVal = a.rounds[2].wins; bVal = b.rounds[2].wins; }
-    else if (sortField === 'rd4') { aVal = a.rounds[3].wins; bVal = b.rounds[3].wins; }
-    else if (sortField === 'rd5') { aVal = a.rounds[4].wins; bVal = b.rounds[4].wins; }
-    else if (sortField === 'rd6') { aVal = a.rounds[5].wins; bVal = b.rounds[5].wins; }
+    else if (sortField === 'rd1') { aVal = a.rounds[0]?.wins || 0; bVal = b.rounds[0]?.wins || 0; }
+    else if (sortField === 'rd2') { aVal = a.rounds[1]?.wins || 0; bVal = b.rounds[1]?.wins || 0; }
+    else if (sortField === 'rd3') { aVal = a.rounds[2]?.wins || 0; bVal = b.rounds[2]?.wins || 0; }
+    else if (sortField === 'rd4') { aVal = a.rounds[3]?.wins || 0; bVal = b.rounds[3]?.wins || 0; }
+    else if (sortField === 'rd5') { aVal = a.rounds[4]?.wins || 0; bVal = b.rounds[4]?.wins || 0; }
+    else if (sortField === 'rd6') { aVal = a.rounds[5]?.wins || 0; bVal = b.rounds[5]?.wins || 0; }
     else if (sortField === 'totalWins') { aVal = a.totalWins; bVal = b.totalWins; }
     else if (sortField === 'winPct') { aVal = a.winPct; bVal = b.winPct; }
     else if (sortField === 'winsRank') { aVal = a.winsRank; bVal = b.winsRank; }
@@ -309,6 +413,88 @@ export default function Dashboard() {
       setHistorySortAsc(false);
     }
   };
+
+  const handleDraftSort = (field: string) => {
+    if (draftSortField === field) {
+      setDraftSortAsc(!draftSortAsc);
+    } else {
+      setDraftSortField(field);
+      setDraftSortAsc(field === 'team');
+    }
+  };
+
+  const handleSeasonMatrixSort = (field: string) => {
+    if (seasonMatrixSortField === field) {
+      setSeasonMatrixSortAsc(!seasonMatrixSortAsc);
+    } else {
+      setSeasonMatrixSortField(field);
+      setSeasonMatrixSortAsc(field === 'team');
+    }
+  };
+
+  const handlePastSort = (field: string) => {
+    if (pastSortField === field) {
+      setPastSortAsc(!pastSortAsc);
+    } else {
+      setPastSortField(field);
+      setPastSortAsc(field === 'owner');
+    }
+  };
+
+  const sortedDraftFrequencyData = [...(draftHistoryData || [])].sort((a: any, b: any) => {
+    let aVal: any = draftSortField === 'team' ? a.team : (a.counts ? a.counts[draftSortField] || 0 : 0);
+    let bVal: any = draftSortField === 'team' ? b.team : (b.counts ? b.counts[draftSortField] || 0 : 0);
+
+    if (aVal < bVal) return draftSortAsc ? -1 : 1;
+    if (aVal > bVal) return draftSortAsc ? 1 : -1;
+    return 0;
+  });
+
+  const sortedSeasonMatrixData = [...(draftHistoryData || [])].sort((a: any, b: any) => {
+    let aVal: any = seasonMatrixSortField === 'team' ? a.team : (a.seasons ? a.seasons[seasonMatrixSortField] || '' : '');
+    let bVal: any = seasonMatrixSortField === 'team' ? b.team : (b.seasons ? b.seasons[seasonMatrixSortField] || '' : '');
+
+    if (aVal < bVal) return seasonMatrixSortAsc ? -1 : 1;
+    if (aVal > bVal) return seasonMatrixSortAsc ? 1 : -1;
+    return 0;
+  });
+
+  const rawPastSeasonData = pastSeasonsData[selectedSeason] || [];
+  const pastSeasonWithWinsSorted = [...rawPastSeasonData].sort((a, b) => b.totalWins - a.totalWins);
+  
+  const processedPastSeasonData = rawPastSeasonData.map((row: any) => {
+    const finish = pastSeasonWithWinsSorted.findIndex((item) => item.owner === row.owner) + 1;
+    const rawPct = row.winPct;
+    const winPctNum = typeof rawPct === 'string' ? parseFloat(rawPct.startsWith('.') ? `0${rawPct}` : rawPct) : (raw || 0);
+
+    return {
+      ...row,
+      draftPosition: row.draftOrder,
+      finish,
+      winPctNum,
+    };
+  });
+
+  const sortedPastSeasonData = [...processedPastSeasonData].sort((a: any, b: any) => {
+    let aVal: any = 0;
+    let bVal: any = 0;
+
+    if (pastSortField === 'draft') { aVal = a.draftPosition; bVal = b.draftPosition; }
+    else if (pastSortField === 'finish') { aVal = a.finish; bVal = b.finish; }
+    else if (pastSortField === 'owner') { aVal = a.owner; bVal = b.owner; }
+    else if (pastSortField === 'rd1') { aVal = a.teams[0]?.wins || 0; bVal = b.teams[0]?.wins || 0; }
+    else if (pastSortField === 'rd2') { aVal = a.teams[1]?.wins || 0; bVal = b.teams[1]?.wins || 0; }
+    else if (pastSortField === 'rd3') { aVal = a.teams[2]?.wins || 0; bVal = b.teams[2]?.wins || 0; }
+    else if (pastSortField === 'rd4') { aVal = a.teams[3]?.wins || 0; bVal = b.teams[3]?.wins || 0; }
+    else if (pastSortField === 'rd5') { aVal = a.teams[4]?.wins || 0; bVal = b.teams[4]?.wins || 0; }
+    else if (pastSortField === 'rd6') { aVal = a.teams[5]?.wins || 0; bVal = b.teams[5]?.wins || 0; }
+    else if (pastSortField === 'totalWins') { aVal = a.totalWins; bVal = b.totalWins; }
+    else if (pastSortField === 'winPct') { aVal = a.winPctNum; bVal = b.winPctNum; }
+
+    if (aVal < bVal) return pastSortAsc ? -1 : 1;
+    if (aVal > bVal) return pastSortAsc ? 1 : -1;
+    return 0;
+  });
 
   const combinedAllTimeStats = (leagueHistoryData.allTimeStats || []).map((stat: any) => {
     const liveOwner = standingsData.find((s) => s.owner === stat.owner);
@@ -357,6 +543,10 @@ export default function Dashboard() {
   const minWinPct = Math.min(...winPctArr);
   const maxWinPct = Math.max(...winPctArr);
 
+  const allDraftCounts = (draftHistoryData || []).flatMap((item: any) => Object.values(item.counts || {}) as number[]);
+  const minDraftCount = allDraftCounts.length > 0 ? Math.min(...allDraftCounts) : 0;
+  const maxDraftCount = allDraftCounts.length > 0 ? Math.max(...allDraftCounts) : 5;
+
   function formatWinPct(pct: number) {
     const formatted = pct.toFixed(3);
     return formatted.startsWith('0') ? formatted.substring(1) : formatted;
@@ -392,16 +582,6 @@ export default function Dashboard() {
     }
   };
 
-  const currentPastSeasonData = pastSeasonsData[selectedSeason] || [];
-  const pastSeasonTeamWins = currentPastSeasonData.flatMap((r: any) => (r.teams || []).map((t: any) => t.wins));
-  const minPastWins = pastSeasonTeamWins.length > 0 ? Math.min(...pastSeasonTeamWins) : 0;
-  const maxPastWins = pastSeasonTeamWins.length > 0 ? Math.max(...pastSeasonTeamWins) : 60;
-
-  const pastSeasonTotals = currentPastSeasonData.map((r: any) => r.totalWins);
-  const minPastTotalWins = pastSeasonTotals.length > 0 ? Math.min(...pastSeasonTotals) : 100;
-  const maxPastTotalWins = pastSeasonTotals.length > 0 ? Math.max(...pastSeasonTotals) : 300;
-
-  // Extract all unique seasons from draftHistoryData for the column headers
   const allDraftSeasons = draftHistoryData.length > 0 && draftHistoryData[0].seasons
     ? Object.keys(draftHistoryData[0].seasons)
     : ['2018-19', '2019-20', '2020-21', '2021-22', '2022-23', '2023-24', '2024-25', '2025-26'];
@@ -414,13 +594,13 @@ export default function Dashboard() {
           <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-3">
             <Trophy className="text-amber-400 h-8 w-8" /> NBA Chat Wins Pool
           </h1>
-          <p className="text-slate-400 mt-1">Live Dashboard & Historical Archives</p>
+          <p className="text-slate-400 mt-1">Live Dashboard, Draft Interface & Historical Archives</p>
         </div>
         <div className="flex items-center gap-3">
           <button 
             onClick={fetchScores} 
             disabled={loading}
-            className="flex items-center gap-2 bg-slate-900 border border-slate-800 hover:border-slate-700 px-4 py-2 rounded-lg text-sm font-medium text-slate-300 transition-all"
+            className="flex items-center gap-2 bg-slate-900 border border-slate-800 hover:border-slate-700 px-4 py-2 rounded-lg text-sm font-medium text-slate-300 transition-all cursor-pointer"
           >
             <RefreshCw className={`h-4 w-4 text-blue-400 ${loading ? 'animate-spin' : ''}`} />
             {loading ? 'Refreshing...' : 'Refresh Live Wins'}
@@ -435,7 +615,7 @@ export default function Dashboard() {
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-4">
         <button
           onClick={() => setActiveTab('live')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all cursor-pointer ${
             activeTab === 'live' 
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
               : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
@@ -444,8 +624,18 @@ export default function Dashboard() {
           <LayoutDashboard className="h-4 w-4" /> 2026-27 Live Dashboard
         </button>
         <button
+          onClick={() => setActiveTab('draftTab')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all cursor-pointer ${
+            activeTab === 'draftTab' 
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
+              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+          }`}
+        >
+          <PlayCircle className="h-4 w-4 text-emerald-400" /> Live Draft Interface
+        </button>
+        <button
           onClick={() => setActiveTab('lottery')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all cursor-pointer ${
             activeTab === 'lottery' 
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
               : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
@@ -455,7 +645,7 @@ export default function Dashboard() {
         </button>
         <button
           onClick={() => setActiveTab('leagueHistory')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all cursor-pointer ${
             activeTab === 'leagueHistory' 
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
               : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
@@ -465,7 +655,7 @@ export default function Dashboard() {
         </button>
         <button
           onClick={() => setActiveTab('draftHistory')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all cursor-pointer ${
             activeTab === 'draftHistory' 
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
               : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
@@ -475,7 +665,7 @@ export default function Dashboard() {
         </button>
         <button
           onClick={() => setActiveTab('pastSeasons')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all cursor-pointer ${
             activeTab === 'pastSeasons' 
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
               : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
@@ -591,7 +781,7 @@ export default function Dashboard() {
             </div>
           </section>
 
-          {/* Interactive Chart Section with Dropdown Selection */}
+          {/* Interactive Chart Section */}
           <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
               <h2 className="text-xl font-bold flex items-center gap-2">
@@ -637,7 +827,7 @@ export default function Dashboard() {
                     }}
                   />
                   <Legend formatter={(value) => String(value).split('_')[0]} />
-                  {BASE_ROSTERS.map((roster) => (
+                  {currentRosters.map((roster) => (
                     <Line
                       key={roster.owner}
                       type="monotone"
@@ -655,20 +845,37 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* TAB 2: DRAFT LOTTERY SIMULATOR */}
+      {/* TAB 2: LIVE DRAFT INTERFACE */}
+      {activeTab === 'draftTab' && (
+        <DraftInterface
+          draftOrder={activeDraftOrder}
+          draftPicks={persistentDraftPicks}
+          setDraftPicks={setPersistentDraftPicks}
+          onFinalizeDraft={handleFinalizeDraftRosters}
+        />
+      )}
+
+      {/* TAB 3: DRAFT LOTTERY SIMULATOR */}
       {activeTab === 'lottery' && (
         <div className="space-y-8">
           <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
             <DraftLottery
-              onLotteryComplete={(results) => {
-                console.log('Lottery finished with results:', results);
+              lotteryState={lotteryState}
+              setLotteryState={setLotteryState}
+              onLockLottery={(results) => {
+                setActiveDraftOrder(results);
+                setActiveTab('draftTab');
+              }}
+              onResetLottery={() => {
+                setActiveDraftOrder(['Karthik', 'James', 'Diriye', 'Jack', 'Jash']);
+                setPersistentDraftPicks([]);
               }}
             />
           </section>
         </div>
       )}
 
-      {/* TAB 3: LEAGUE HISTORY */}
+      {/* TAB 4: LEAGUE HISTORY */}
       {activeTab === 'leagueHistory' && (
         <div className="space-y-8">
           <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl">
@@ -754,25 +961,76 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* TAB 4: DRAFT HISTORY */}
+      {/* TAB 5: DRAFT HISTORY */}
       {activeTab === 'draftHistory' && (
         <div className="space-y-8">
           <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl">
             <h2 className="text-xl font-bold flex items-center gap-2 mb-6">
-              <History className="text-blue-400 h-5 w-5" /> Season-by-Season Team Draft Matrix
+              <History className="text-blue-400 h-5 w-5" /> Team Selection & Draft Frequency Matrix
             </h2>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 text-sm">
-                    <th className="py-3 px-4 font-semibold">NBA Team</th>
-                    {allDraftSeasons.map((season) => (
-                      <th key={season} className="py-3 px-4 font-semibold text-center">{season}</th>
+                  <tr className="border-b border-slate-800 text-slate-400 text-sm select-none">
+                    <th onClick={() => handleDraftSort('team')} className="py-3 px-4 font-semibold cursor-pointer hover:text-slate-200">
+                      <div className="flex items-center gap-1">NBA Team <ArrowUpDown className="h-3 w-3 opacity-60" /></div>
+                    </th>
+                    {['Diriye', 'Jack', 'James', 'Jash', 'Karthik'].map((owner) => (
+                      <th key={owner} onClick={() => handleDraftSort(owner)} className="py-3 px-4 font-semibold text-center cursor-pointer hover:text-slate-200">
+                        <div className="flex items-center justify-center gap-1">{owner} <ArrowUpDown className="h-3 w-3 opacity-60" /></div>
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 text-sm">
-                  {(draftHistoryData || []).map((row: any) => {
+                  {sortedDraftFrequencyData.map((row: any) => {
+                    const style = TEAM_COLORS[row.team] || { bg: 'bg-slate-800', text: 'text-slate-200', border: 'border-slate-700' };
+                    return (
+                      <tr key={row.team} className="hover:bg-slate-800/30">
+                        <td className="py-3 px-4 font-semibold text-slate-200">
+                          <span className={`px-2.5 py-1 rounded-md border font-medium text-xs ${style.bg} ${style.text} ${style.border}`}>
+                            {row.team}
+                          </span>
+                        </td>
+                        {['Diriye', 'Jack', 'James', 'Jash', 'Karthik'].map((owner) => {
+                          const count = row.counts ? row.counts[owner] || 0 : 0;
+                          const countStyle = getGradientStyle(count, minDraftCount, maxDraftCount);
+                          return (
+                            <td key={owner} className="py-3 px-4 text-center font-mono">
+                              <span className={`inline-block px-3 py-1 rounded-md border text-xs ${countStyle}`}>
+                                {count}
+                              </span>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl">
+            <h2 className="text-xl font-bold flex items-center gap-2 mb-6">
+              <Calendar className="text-blue-400 h-5 w-5" /> Season-by-Season Team Draft Matrix
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse whitespace-nowrap">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-400 text-sm select-none">
+                    <th onClick={() => handleSeasonMatrixSort('team')} className="py-3 px-4 font-semibold cursor-pointer hover:text-slate-200">
+                      <div className="flex items-center gap-1">NBA Team <ArrowUpDown className="h-3 w-3 opacity-60" /></div>
+                    </th>
+                    {allDraftSeasons.map((season) => (
+                      <th key={season} onClick={() => handleSeasonMatrixSort(season)} className="py-3 px-4 font-semibold text-center cursor-pointer hover:text-slate-200">
+                        <div className="flex items-center justify-center gap-1">{season} <ArrowUpDown className="h-3 w-3 opacity-60" /></div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 text-sm">
+                  {sortedSeasonMatrixData.map((row: any) => {
                     const style = TEAM_COLORS[row.team] || { bg: 'bg-slate-800', text: 'text-slate-200', border: 'border-slate-700' };
                     return (
                       <tr key={row.team} className="hover:bg-slate-800/30">
@@ -805,7 +1063,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* TAB 5: PAST SEASONS ARCHIVE */}
+      {/* TAB 6: PAST SEASONS ARCHIVE */}
       {activeTab === 'pastSeasons' && (
         <div className="space-y-8">
           <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl">
@@ -830,26 +1088,41 @@ export default function Dashboard() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 text-sm">
-                    <th className="py-3 px-3 font-semibold">Finish</th>
-                    <th className="py-3 px-4 font-semibold">Owner</th>
-                    {['Rd 1', 'Rd 2', 'Rd 3', 'Rd 4', 'Rd 5', 'Rd 6'].map((rd) => (
-                      <th key={rd} className="py-3 px-3 font-semibold text-center">{rd}</th>
+                  <tr className="border-b border-slate-800 text-slate-400 text-sm select-none">
+                    <th onClick={() => handlePastSort('draft')} className="py-3 px-3 font-semibold text-center cursor-pointer hover:text-slate-200">
+                      <div className="flex items-center justify-center gap-1">Draft <ArrowUpDown className="h-3 w-3 opacity-60" /></div>
+                    </th>
+                    <th onClick={() => handlePastSort('finish')} className="py-3 px-3 font-semibold text-center cursor-pointer hover:text-slate-200">
+                      <div className="flex items-center justify-center gap-1">Finish <ArrowUpDown className="h-3 w-3 opacity-60" /></div>
+                    </th>
+                    <th onClick={() => handlePastSort('owner')} className="py-3 px-4 font-semibold cursor-pointer hover:text-slate-200">
+                      <div className="flex items-center gap-1">Owner <ArrowUpDown className="h-3 w-3 opacity-60" /></div>
+                    </th>
+                    {['Rd 1', 'Rd 2', 'Rd 3', 'Rd 4', 'Rd 5', 'Rd 6'].map((rd, i) => (
+                      <th key={rd} onClick={() => handlePastSort(`rd${i + 1}`)} className="py-3 px-3 font-semibold text-center cursor-pointer hover:text-slate-200">
+                        <div className="flex items-center justify-center gap-1">{rd} <ArrowUpDown className="h-3 w-3 opacity-60" /></div>
+                      </th>
                     ))}
-                    <th className="py-3 px-4 font-semibold text-center">Total Wins</th>
-                    <th className="py-3 px-4 font-semibold text-center">Win %</th>
+                    <th onClick={() => handlePastSort('totalWins')} className="py-3 px-4 font-semibold text-center cursor-pointer hover:text-slate-200">
+                      <div className="flex items-center justify-center gap-1">Total Wins <ArrowUpDown className="h-3 w-3 opacity-60" /></div>
+                    </th>
+                    <th onClick={() => handlePastSort('winPct')} className="py-3 px-4 font-semibold text-center cursor-pointer hover:text-slate-200">
+                      <div className="flex items-center justify-center gap-1">Win % <ArrowUpDown className="h-3 w-3 opacity-60" /></div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 text-sm">
-                  {(currentPastSeasonData || []).map((row: any, idx: number) => {
+                  {sortedPastSeasonData.map((row: any) => {
                     const totalWinsStyle = getGradientStyle(row.totalWins, minPastTotalWins, maxPastTotalWins);
-                    const rankStyle = getRankGradientStyle(idx + 1);
+                    const rankStyle = getRankGradientStyle(row.finish);
+                    const winPctStyle = getGradientStyle(row.winPctNum, minPastWinPct, maxPastWinPct);
 
                     return (
                       <tr key={row.owner} className="hover:bg-slate-800/30">
+                        <td className="py-4 px-3 font-mono text-slate-400 text-center">#{row.draftPosition}</td>
                         <td className="py-4 px-3 text-center">
                           <span className={`inline-block px-2.5 py-0.5 rounded-md border text-xs shadow-sm ${rankStyle}`}>
-                            #{idx + 1}
+                            #{row.finish}
                           </span>
                         </td>
                         <td className="py-4 px-4 font-semibold text-slate-200">
@@ -882,7 +1155,7 @@ export default function Dashboard() {
                           </span>
                         </td>
                         <td className="py-4 px-4 text-center font-mono">
-                          <span className="text-slate-300 font-semibold">
+                          <span className={`inline-block px-3 py-1 rounded-md border text-sm shadow-sm ${winPctStyle}`}>
                             {row.winPct}
                           </span>
                         </td>

@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+'use client';
+
+import React from 'react';
+import { Lock, CheckCircle2, RotateCcw } from 'lucide-react';
 
 interface Owner {
   id: string;
@@ -16,15 +19,32 @@ const INITIAL_LOTTERY_DATA: Owner[] = [
   { id: 'karthik', name: 'Karthik', rank: 5, balls: 1, avatar: '/avatars/karthik.png' },
 ];
 
-export default function DraftLottery() {
-  const [drumPool, setDrumPool] = useState<Owner[]>([]);
-  const [stage, setStage] = useState<'idle' | 'drawing' | 'selecting' | 'complete'>('idle');
-  
-  const [drawnQueue, setDrawnQueue] = useState<Owner[]>([]);
-  const [currentPickerIndex, setCurrentPickerIndex] = useState<number>(0);
-  const [availableSlots, setAvailableSlots] = useState<number[]>([1, 2, 3, 4, 5]);
-  const [slotAssignments, setSlotAssignments] = useState<{ [ownerId: string]: number }>({});
-  const [lastDrawnOwner, setLastDrawnOwner] = useState<Owner | null>(null);
+interface DraftLotteryProps {
+  lotteryState: {
+    drumPool: Owner[];
+    stage: 'idle' | 'drawing' | 'selecting' | 'complete';
+    drawnQueue: Owner[];
+    currentPickerIndex: number;
+    availableSlots: number[];
+    slotAssignments: { [ownerId: string]: number };
+    lastDrawnOwner: Owner | null;
+    isLocked: boolean;
+  };
+  setLotteryState: React.Dispatch<React.SetStateAction<any>>;
+  onLockLottery?: (results: string[]) => void;
+  onResetLottery?: () => void;
+}
+
+export default function DraftLottery({ lotteryState, setLotteryState, onLockLottery, onResetLottery }: DraftLotteryProps) {
+  const {
+    drumPool,
+    stage,
+    drawnQueue,
+    currentPickerIndex,
+    availableSlots,
+    slotAssignments,
+    isLocked,
+  } = lotteryState;
 
   const startLottery = () => {
     let pool: Owner[] = [];
@@ -34,13 +54,18 @@ export default function DraftLottery() {
       }
     });
 
-    setDrumPool(pool);
-    setDrawnQueue([]);
-    setSlotAssignments({});
-    setAvailableSlots([1, 2, 3, 4, 5]);
-    setCurrentPickerIndex(0);
-    setLastDrawnOwner(null);
-    setStage('drawing');
+    setLotteryState({
+      drumPool: pool,
+      stage: 'drawing',
+      drawnQueue: [],
+      currentPickerIndex: 0,
+      availableSlots: [1, 2, 3, 4, 5],
+      slotAssignments: {},
+      lastDrawnOwner: null,
+      isLocked: false,
+    });
+
+    if (onResetLottery) onResetLottery();
   };
 
   const drawNextOwner = () => {
@@ -51,10 +76,13 @@ export default function DraftLottery() {
     const selectedOwner = pool[randomIndex];
     const remainingPool = pool.filter((o) => o.id !== selectedOwner.id);
     
-    setDrumPool(remainingPool);
-    setLastDrawnOwner(selectedOwner);
-    setDrawnQueue((prev) => [...prev, selectedOwner]);
-    setStage('selecting');
+    setLotteryState((prev: any) => ({
+      ...prev,
+      drumPool: remainingPool,
+      lastDrawnOwner: selectedOwner,
+      drawnQueue: [...prev.drawnQueue, selectedOwner],
+      stage: 'selecting',
+    }));
   };
 
   const handleSelectSlot = (slot: number) => {
@@ -62,16 +90,33 @@ export default function DraftLottery() {
     if (!currentOwner) return;
 
     const updatedAssignments = { ...slotAssignments, [currentOwner.id]: slot };
-    setSlotAssignments(updatedAssignments);
-    setAvailableSlots(availableSlots.filter((s) => s !== slot));
+    const updatedAvailableSlots = availableSlots.filter((s) => s !== slot);
+    const nextStage = drumPool.length > 0 ? 'drawing' : 'complete';
 
-    if (drumPool.length > 0) {
-      setStage('drawing');
-    } else {
-      setStage('complete');
+    setLotteryState((prev: any) => ({
+      ...prev,
+      slotAssignments: updatedAssignments,
+      availableSlots: updatedAvailableSlots,
+      stage: nextStage,
+      currentPickerIndex: prev.currentPickerIndex + 1,
+    }));
+  };
+
+  const handleLockOrder = () => {
+    setLotteryState((prev: any) => ({ ...prev, isLocked: true }));
+    
+    const finalOrder: string[] = [];
+    for (let slot = 1; slot <= 5; slot++) {
+      const ownerEntry = Object.entries(slotAssignments).find(([_, s]) => s === slot);
+      if (ownerEntry) {
+        const ownerObj = INITIAL_LOTTERY_DATA.find((o) => o.id === ownerEntry[0]);
+        if (ownerObj) finalOrder.push(ownerObj.name);
+      }
     }
 
-    setCurrentPickerIndex((prev) => prev + 1);
+    if (onLockLottery && finalOrder.length === 5) {
+      onLockLottery(finalOrder);
+    }
   };
 
   const totalBalls = INITIAL_LOTTERY_DATA.reduce((acc, curr) => acc + curr.balls, 0);
@@ -89,7 +134,7 @@ export default function DraftLottery() {
         {stage === 'idle' && (
           <button
             onClick={startLottery}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-5 py-2.5 rounded-lg shadow transition"
+            className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-5 py-2.5 rounded-lg shadow transition cursor-pointer"
           >
             Start Lottery
           </button>
@@ -97,9 +142,9 @@ export default function DraftLottery() {
         {stage !== 'idle' && (
           <button
             onClick={startLottery}
-            className="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-4 py-2 rounded-lg shadow transition text-sm"
+            className="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-4 py-2 rounded-lg shadow transition text-sm flex items-center gap-2 cursor-pointer"
           >
-            Reset Lottery
+            <RotateCcw className="h-4 w-4" /> Reset Lottery
           </button>
         )}
       </div>
@@ -148,14 +193,14 @@ export default function DraftLottery() {
 
       {/* Interactive Lottery Control Area */}
       {stage === 'drawing' && (
-        <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-6 text-center space-y-4">
+        <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-6 text-center space-y-4 shadow-xl">
           <h3 className="text-xl font-bold text-white">Drum Ready</h3>
           <p className="text-slate-300 text-sm">
             {drumPool.length} balls remaining in the drum. Draw the next owner to determine picking order.
           </p>
           <button
             onClick={drawNextOwner}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-3 rounded-xl shadow-lg transition text-lg"
+            className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-3 rounded-xl shadow-lg transition text-lg cursor-pointer"
           >
             Draw Next Ball From Drum
           </button>
@@ -197,8 +242,16 @@ export default function DraftLottery() {
       )}
 
       {stage === 'complete' && (
-        <div className="bg-slate-800/80 border border-emerald-500/50 rounded-xl p-6 space-y-4">
-          <h3 className="text-xl font-bold text-emerald-400">Draft Order Finalized!</h3>
+        <div className="bg-slate-800/80 border border-emerald-500/50 rounded-xl p-6 space-y-6 shadow-xl">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold text-emerald-400">Draft Order Finalized!</h3>
+            {isLocked && (
+              <span className="flex items-center gap-1.5 bg-emerald-950 border border-emerald-700 text-emerald-300 text-xs font-bold px-3 py-1 rounded-full">
+                <CheckCircle2 className="h-4 w-4" /> Locked & Sent to Live Draft
+              </span>
+            )}
+          </div>
+
           <ol className="divide-y divide-slate-700">
             {[1, 2, 3, 4, 5].map((slot) => {
               const ownerEntry = Object.entries(slotAssignments).find(([id, s]) => s === slot);
@@ -217,6 +270,38 @@ export default function DraftLottery() {
               );
             })}
           </ol>
+
+          {!isLocked ? (
+            <div className="pt-2">
+              <button
+                onClick={handleLockOrder}
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Lock className="h-5 w-5" /> Lock In Draft Order & Start Live Draft
+              </button>
+            </div>
+          ) : (
+            <div className="pt-2">
+              <button
+                onClick={() => {
+                  if (onLockLottery) {
+                    const finalOrder: string[] = [];
+                    for (let slot = 1; slot <= 5; slot++) {
+                      const ownerEntry = Object.entries(slotAssignments).find(([_, s]) => s === slot);
+                      if (ownerEntry) {
+                        const ownerObj = INITIAL_LOTTERY_DATA.find((o) => o.id === ownerEntry[0]);
+                        if (ownerObj) finalOrder.push(ownerObj.name);
+                      }
+                    }
+                    onLockLottery(finalOrder);
+                  }
+                }}
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 px-6 rounded-xl shadow transition cursor-pointer"
+              >
+                Go to Live Draft Tab ➔
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
