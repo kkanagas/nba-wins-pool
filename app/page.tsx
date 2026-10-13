@@ -25,37 +25,66 @@ const PLAYER_COLORS: Record<string, string> = {
 
 const TEAM_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   Hawks: { bg: 'bg-red-950/80', text: 'text-red-300', border: 'border-red-700/50' },
+  Atlanta: { bg: 'bg-red-950/80', text: 'text-red-300', border: 'border-red-700/50' },
   Celtics: { bg: 'bg-emerald-950/80', text: 'text-emerald-300', border: 'border-emerald-700/50' },
+  Boston: { bg: 'bg-emerald-950/80', text: 'text-emerald-300', border: 'border-emerald-700/50' },
   Nets: { bg: 'bg-zinc-900/90', text: 'text-zinc-200', border: 'border-zinc-700/50' },
+  Brooklyn: { bg: 'bg-zinc-900/90', text: 'text-zinc-200', border: 'border-zinc-700/50' },
   Hornets: { bg: 'bg-teal-950/80', text: 'text-teal-300', border: 'border-teal-700/50' },
+  Charlotte: { bg: 'bg-teal-950/80', text: 'text-teal-300', border: 'border-teal-700/50' },
   Bulls: { bg: 'bg-red-950/90', text: 'text-red-400', border: 'border-red-800/60' },
+  Chicago: { bg: 'bg-red-950/90', text: 'text-red-400', border: 'border-red-800/60' },
   Cavaliers: { bg: 'bg-rose-950/80', text: 'text-rose-300', border: 'border-rose-700/50' },
+  Cleveland: { bg: 'bg-rose-950/80', text: 'text-rose-300', border: 'border-rose-700/50' },
   Mavericks: { bg: 'bg-blue-950/80', text: 'text-blue-300', border: 'border-blue-700/50' },
   Dallas: { bg: 'bg-blue-950/80', text: 'text-blue-300', border: 'border-blue-700/50' },
   Nuggets: { bg: 'bg-amber-950/80', text: 'text-amber-300', border: 'border-amber-700/50' },
+  Denver: { bg: 'bg-amber-950/80', text: 'text-amber-300', border: 'border-amber-700/50' },
   Pistons: { bg: 'bg-blue-950/90', text: 'text-blue-400', border: 'border-blue-800/60' },
+  Detroit: { bg: 'bg-blue-950/90', text: 'text-blue-400', border: 'border-blue-800/60' },
   Warriors: { bg: 'bg-yellow-950/80', text: 'text-yellow-300', border: 'border-yellow-700/50' },
+  'Golden State': { bg: 'bg-yellow-950/80', text: 'text-yellow-300', border: 'border-yellow-700/50' },
   Rockets: { bg: 'bg-red-950/80', text: 'text-red-300', border: 'border-red-700/50' },
+  Houston: { bg: 'bg-red-950/80', text: 'text-red-300', border: 'border-red-700/50' },
   Pacers: { bg: 'bg-indigo-950/80', text: 'text-indigo-300', border: 'border-indigo-700/50' },
+  Indiana: { bg: 'bg-indigo-950/80', text: 'text-indigo-300', border: 'border-indigo-700/50' },
   Clippers: { bg: 'bg-blue-950/80', text: 'text-cyan-300', border: 'border-cyan-700/50' },
+  'LA Clippers': { bg: 'bg-blue-950/80', text: 'text-cyan-300', border: 'border-cyan-700/50' },
   Lakers: { bg: 'bg-purple-950/80', text: 'text-yellow-300', border: 'border-purple-700/50' },
+  'LA Lakers': { bg: 'bg-purple-950/80', text: 'text-yellow-300', border: 'border-purple-700/50' },
   Grizzlies: { bg: 'bg-sky-950/80', text: 'text-sky-300', border: 'border-sky-700/50' },
+  Memphis: { bg: 'bg-sky-950/80', text: 'text-sky-300', border: 'border-sky-700/50' },
   Heat: { bg: 'bg-red-950/90', text: 'text-red-300', border: 'border-orange-700/50' },
+  Miami: { bg: 'bg-red-950/90', text: 'text-red-300', border: 'border-orange-700/50' },
   Bucks: { bg: 'bg-emerald-950/90', text: 'text-emerald-300', border: 'border-emerald-700/50' },
+  Milwaukee: { bg: 'bg-emerald-950/90', text: 'text-emerald-300', border: 'border-emerald-700/50' },
   Timberwolves: { bg: 'bg-slate-900/90', text: 'text-cyan-300', border: 'border-cyan-700/50' },
+  Minnesota: { bg: 'bg-slate-900/90', text: 'text-cyan-300', border: 'border-cyan-700/50' },
   Pelicans: { bg: 'bg-blue-950/90', text: 'text-amber-300', border: 'border-blue-700/50' },
+  'New Orleans': { bg: 'bg-blue-950/90', text: 'text-amber-300', border: 'border-blue-700/50' },
   Knicks: { bg: 'bg-orange-950/80', text: 'text-orange-300', border: 'border-orange-700/50' },
+  'New York': { bg: 'bg-orange-950/80', text: 'text-orange-300', border: 'border-orange-700/50' },
   Thunder: { bg: 'bg-sky-950/80', text: 'text-orange-300', border: 'border-sky-700/50' },
+  'Oklahoma City': { bg: 'bg-sky-950/80', text: 'text-orange-300', border: 'border-sky-700/50' },
   Magic: { bg: 'bg-blue-950/80', text: 'text-blue-300', border: 'border-blue-600/50' },
+  Orlando: { bg: 'bg-blue-950/80', text: 'text-blue-300', border: 'border-blue-600/50' },
   '76ers': { bg: 'bg-blue-950/80', text: 'text-blue-300', border: 'border-blue-700/50' },
+  Philadelphia: { bg: 'bg-blue-950/80', text: 'text-blue-300', border: 'border-blue-700/50' },
   Suns: { bg: 'bg-purple-950/80', text: 'text-orange-300', border: 'border-orange-700/50' },
+  Phoenix: { bg: 'bg-purple-950/80', text: 'text-orange-300', border: 'border-orange-700/50' },
   'Trail Blazers': { bg: 'bg-stone-900/90', text: 'text-red-400', border: 'border-red-800/60' },
   Blazers: { bg: 'bg-stone-900/90', text: 'text-red-400', border: 'border-red-800/60' },
+  Portland: { bg: 'bg-stone-900/90', text: 'text-red-400', border: 'border-red-800/60' },
   Kings: { bg: 'bg-purple-950/80', text: 'text-purple-300', border: 'border-purple-700/50' },
+  Sacramento: { bg: 'bg-purple-950/80', text: 'text-purple-300', border: 'border-purple-700/50' },
   Spurs: { bg: 'bg-slate-900/90', text: 'text-slate-200', border: 'border-slate-700/50' },
+  'San Antonio': { bg: 'bg-slate-900/90', text: 'text-slate-200', border: 'border-slate-700/50' },
   Raptors: { bg: 'bg-red-950/90', text: 'text-red-300', border: 'border-red-800/60' },
+  Toronto: { bg: 'bg-red-950/90', text: 'text-red-300', border: 'border-red-800/60' },
   Jazz: { bg: 'bg-violet-950/80', text: 'text-violet-300', border: 'border-violet-700/50' },
+  Utah: { bg: 'bg-violet-950/80', text: 'text-violet-300', border: 'border-violet-700/50' },
   Wizards: { bg: 'bg-blue-950/90', text: 'text-red-300', border: 'border-blue-700/50' },
+  Washington: { bg: 'bg-blue-950/90', text: 'text-red-300', border: 'border-blue-700/50' },
 };
 
 const BASE_ROSTERS = [
@@ -69,9 +98,11 @@ const BASE_ROSTERS = [
 type TabType = 'live' | 'lottery' | 'leagueHistory' | 'draftHistory' | 'pastSeasons';
 type SortField = 'draftOrder' | 'owner' | 'rd1' | 'rd2' | 'rd3' | 'rd4' | 'rd5' | 'rd6' | 'totalWins' | 'winPct' | 'winsRank' | 'pctRank';
 type HistorySortField = 'owner' | 'points' | 'wins' | 'winPct' | 'rings';
+type ChartType = 'wins' | 'winsRank' | 'winPct' | 'winPctRank';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<TabType>('live');
+  const [selectedChart, setSelectedChart] = useState<ChartType>('wins');
   const [sortField, setSortField] = useState<SortField>('draftOrder');
   const [sortAsc, setSortAsc] = useState<boolean>(true);
   
@@ -89,7 +120,7 @@ export default function Dashboard() {
   const [pastSeasonsData, setPastSeasonsData] = useState<any>({});
   const [selectedSeason, setSelectedSeason] = useState<string>('2025-26');
 
-  const recordDailySnapshot = async (currentWins: Record<string, number>) => {
+  const recordDailySnapshot = async (currentWins: Record<string, number>, currentLosses: Record<string, number>) => {
     const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
     try {
       const res = await fetch('/api/history');
@@ -105,8 +136,10 @@ export default function Dashboard() {
 
       const snapshot: Record<string, any> = { date: todayStr };
       BASE_ROSTERS.forEach((roster) => {
-        const ownerTotal = roster.teamNames.reduce((acc, name) => acc + (currentWins[name] || 0), 0);
-        snapshot[roster.owner] = ownerTotal;
+        const ownerWins = roster.teamNames.reduce((acc, name) => acc + (currentWins[name] || 0), 0);
+        const ownerLosses = roster.teamNames.reduce((acc, name) => acc + (currentLosses[name] || 0), 0);
+        snapshot[roster.owner] = ownerWins;
+        snapshot[`${roster.owner}_losses`] = ownerLosses;
       });
 
       const postRes = await fetch('/api/history', {
@@ -132,7 +165,7 @@ export default function Dashboard() {
         setLiveWins(data.wins);
         setLiveLosses(data.losses || {});
         setLastUpdated(new Date().toLocaleTimeString());
-        await recordDailySnapshot(data.wins);
+        await recordDailySnapshot(data.wins, data.losses || {});
       }
     } catch (err) {
       console.error('Failed to fetch live scores', err);
@@ -192,6 +225,50 @@ export default function Dashboard() {
 
   const sortedByPct = [...standingsData].sort((a, b) => b.winPct - a.winPct);
   sortedByPct.forEach((item, index) => { item.pctRank = index + 1; });
+
+  const finalSnapshotsByDate = history.reduce<Record<string, any>>((acc, entry) => {
+    if (entry && entry.date) {
+      acc[entry.date] = entry;
+    }
+    return acc;
+  }, {});
+
+  const deduplicatedHistory = Object.values(finalSnapshotsByDate);
+
+  const historyWithRanks = deduplicatedHistory.map((entry) => {
+    const entryCopy = { ...entry };
+    const ownersList = BASE_ROSTERS.map((r) => r.owner);
+    
+    ownersList.forEach((owner) => {
+      const wins = entry[owner] || 0;
+      let losses = entry[`${owner}_losses`];
+
+      if (losses === undefined) {
+        const liveMatch = standingsData.find((s) => s.owner === owner);
+        if (liveMatch && liveMatch.totalWins > 0) {
+          const totalGamesInferred = Math.round(wins / liveMatch.winPct);
+          losses = Math.max(0, totalGamesInferred - wins);
+        } else {
+          losses = 0;
+        }
+      }
+
+      const totalGames = wins + losses;
+      entryCopy[`${owner}_pct`] = totalGames > 0 ? wins / totalGames : 0;
+    });
+
+    const sortedByWinEntry = [...ownersList].sort((a, b) => (entry[b] || 0) - (entry[a] || 0));
+    sortedByWinEntry.forEach((owner, idx) => {
+      entryCopy[`${owner}_winsRank`] = idx + 1;
+    });
+
+    const sortedByPctEntry = [...ownersList].sort((a, b) => (entryCopy[`${b}_pct`] || 0) - (entryCopy[`${a}_pct`] || 0));
+    sortedByPctEntry.forEach((owner, idx) => {
+      entryCopy[`${owner}_pctRank`] = idx + 1;
+    });
+
+    return entryCopy;
+  });
 
   const sortedStandings = [...standingsData].sort((a, b) => {
     let aVal: any = 0;
@@ -280,10 +357,6 @@ export default function Dashboard() {
   const minWinPct = Math.min(...winPctArr);
   const maxWinPct = Math.max(...winPctArr);
 
-  const allDraftCounts = (draftHistoryData || []).flatMap((item: any) => Object.values(item.counts || {}) as number[]);
-  const minDraftCount = allDraftCounts.length > 0 ? Math.min(...allDraftCounts) : 0;
-  const maxDraftCount = allDraftCounts.length > 0 ? Math.max(...allDraftCounts) : 5;
-
   function formatWinPct(pct: number) {
     const formatted = pct.toFixed(3);
     return formatted.startsWith('0') ? formatted.substring(1) : formatted;
@@ -308,6 +381,17 @@ export default function Dashboard() {
     }
   }
 
+  const getChartDataKey = (owner: string) => {
+    switch (selectedChart) {
+      case 'winsRank': return `${owner}_winsRank`;
+      case 'winPct': return `${owner}_pct`;
+      case 'winPctRank': return `${owner}_pctRank`;
+      case 'wins':
+      default:
+        return owner;
+    }
+  };
+
   const currentPastSeasonData = pastSeasonsData[selectedSeason] || [];
   const pastSeasonTeamWins = currentPastSeasonData.flatMap((r: any) => (r.teams || []).map((t: any) => t.wins));
   const minPastWins = pastSeasonTeamWins.length > 0 ? Math.min(...pastSeasonTeamWins) : 0;
@@ -316,6 +400,11 @@ export default function Dashboard() {
   const pastSeasonTotals = currentPastSeasonData.map((r: any) => r.totalWins);
   const minPastTotalWins = pastSeasonTotals.length > 0 ? Math.min(...pastSeasonTotals) : 100;
   const maxPastTotalWins = pastSeasonTotals.length > 0 ? Math.max(...pastSeasonTotals) : 300;
+
+  // Extract all unique seasons from draftHistoryData for the column headers
+  const allDraftSeasons = draftHistoryData.length > 0 && draftHistoryData[0].seasons
+    ? Object.keys(draftHistoryData[0].seasons)
+    : ['2018-19', '2019-20', '2020-21', '2021-22', '2022-23', '2023-24', '2024-25', '2025-26'];
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8 max-w-[98rem] mx-auto space-y-8">
@@ -470,7 +559,7 @@ export default function Dashboard() {
                                 <span className={`px-2 py-0.5 rounded-md border font-mono text-xs ${teamWinStyle}`}>
                                   {team.wins}
                                 </span>
-                            </div>
+                              </div>
                             </td>
                           );
                         })}
@@ -502,25 +591,58 @@ export default function Dashboard() {
             </div>
           </section>
 
-          <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
-            <h2 className="text-xl font-bold flex items-center gap-2 mb-6">
-              <TrendingUp className="text-emerald-400 h-5 w-5" /> Daily Win Progression
-            </h2>
-            <div className="h-80 w-full">
+          {/* Interactive Chart Section with Dropdown Selection */}
+          <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <TrendingUp className="text-emerald-400 h-5 w-5" /> Progression Tracker
+              </h2>
+              <div className="flex items-center gap-3">
+                <label htmlFor="chart-select" className="text-sm font-medium text-slate-400">
+                  Select Metric:
+                </label>
+                <select
+                  id="chart-select"
+                  value={selectedChart}
+                  onChange={(e) => setSelectedChart(e.target.value as ChartType)}
+                  className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value="wins">Wins by Date</option>
+                  <option value="winsRank">Win Rank by Date</option>
+                  <option value="winPct">Winning Percentage by Date</option>
+                  <option value="winPctRank">Winning Percentage Rank by Date</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="h-80 w-full pt-2">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={history} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <LineChart data={historyWithRanks} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
-                  <XAxis dataKey="date" stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" />
+                  <XAxis dataKey="date" stroke="#94a3b8" allowDuplicatedCategory={false} />
+                  <YAxis 
+                    stroke="#94a3b8" 
+                    reversed={selectedChart === 'winsRank' || selectedChart === 'winPctRank'}
+                    domain={selectedChart === 'winsRank' || selectedChart === 'winPctRank' ? [1, 5] : selectedChart === 'winPct' ? [0, 1] : ['auto', 'auto']}
+                    ticks={selectedChart === 'winsRank' || selectedChart === 'winPctRank' ? [1, 2, 3, 4, 5] : undefined}
+                    tickFormatter={selectedChart === 'winPct' ? (v) => `${(v * 100).toFixed(0)}%` : undefined}
+                  />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '0.5rem', color: '#f8fafc' }}
+                    formatter={(val: any, name: any) => {
+                      const cleanName = String(name).split('_')[0];
+                      if (selectedChart === 'winPct') return [`${(Number(val) * 100).toFixed(1)}%`, cleanName];
+                      if (selectedChart === 'winsRank' || selectedChart === 'winPctRank') return [`#${val}`, cleanName];
+                      return [val, cleanName];
+                    }}
                   />
-                  <Legend />
+                  <Legend formatter={(value) => String(value).split('_')[0]} />
                   {BASE_ROSTERS.map((roster) => (
                     <Line
                       key={roster.owner}
                       type="monotone"
-                      dataKey={roster.owner}
+                      name={roster.owner}
+                      dataKey={getChartDataKey(roster.owner)}
                       stroke={PLAYER_COLORS[roster.owner]}
                       strokeWidth={3}
                       dot={{ r: 4 }}
@@ -608,21 +730,21 @@ export default function Dashboard() {
                   <tr className="border-b border-slate-800 text-slate-400 text-sm">
                     <th className="py-3 px-4 font-semibold">Season</th>
                     <th className="py-3 px-4 font-semibold text-center text-amber-300">1st Place 🏆</th>
-                    <th className="py-3 px-4 font-semibold text-center text-slate-300">2nd Place</th>
-                    <th className="py-3 px-4 font-semibold text-center text-amber-700">3rd Place</th>
-                    <th className="py-3 px-4 font-semibold text-center">4th Place</th>
-                    <th className="py-3 px-4 font-semibold text-center">5th Place</th>
+                    <th className="py-3 px-4 font-semibold text-center text-slate-300">2nd Place 🥈</th>
+                    <th className="py-3 px-4 font-semibold text-center text-amber-600">3rd Place 🥉</th>
+                    <th className="py-3 px-4 font-semibold text-center text-slate-400">4th Place</th>
+                    <th className="py-3 px-4 font-semibold text-center text-slate-500">5th Place</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 text-sm">
-                  {(leagueHistoryData.yearlyFinish || []).map((season: any) => (
-                    <tr key={season.season} className="hover:bg-slate-800/30 font-medium">
-                      <td className="py-4 px-4 font-mono text-slate-300">{season.season}</td>
-                      <td className="py-4 px-4 text-center text-amber-400 font-bold">{season.first}</td>
-                      <td className="py-4 px-4 text-center text-slate-200">{season.second}</td>
-                      <td className="py-4 px-4 text-center text-amber-700">{season.third}</td>
-                      <td className="py-4 px-4 text-center text-slate-400">{season.fourth}</td>
-                      <td className="py-4 px-4 text-center text-slate-400">{season.fifth}</td>
+                  {(leagueHistoryData.yearlyFinishes || []).map((row: any) => (
+                    <tr key={row.season} className="hover:bg-slate-800/30">
+                      <td className="py-4 px-4 font-bold text-slate-200">{row.season}</td>
+                      <td className="py-4 px-4 text-center font-semibold text-amber-300">{row.first}</td>
+                      <td className="py-4 px-4 text-center font-semibold text-slate-300">{row.second}</td>
+                      <td className="py-4 px-4 text-center font-semibold text-amber-600">{row.third}</td>
+                      <td className="py-4 px-4 text-center text-slate-400">{row.fourth}</td>
+                      <td className="py-4 px-4 text-center text-slate-500">{row.fifth}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -637,38 +759,39 @@ export default function Dashboard() {
         <div className="space-y-8">
           <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl">
             <h2 className="text-xl font-bold flex items-center gap-2 mb-6">
-              <History className="text-blue-400 h-5 w-5" /> Team Draft Frequency Matrix (All-Time)
+              <History className="text-blue-400 h-5 w-5" /> Season-by-Season Team Draft Matrix
             </h2>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
                   <tr className="border-b border-slate-800 text-slate-400 text-sm">
-                    <th className="py-3 px-4 font-semibold">Team</th>
-                    <th className="py-3 px-4 font-semibold text-center">Total Drafted</th>
-                    {['James', 'Jash', 'Jack', 'Diriye', 'Karthik'].map((owner) => (
-                      <th key={owner} className="py-3 px-4 font-semibold text-center">{owner}</th>
+                    <th className="py-3 px-4 font-semibold">NBA Team</th>
+                    {allDraftSeasons.map((season) => (
+                      <th key={season} className="py-3 px-4 font-semibold text-center">{season}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 text-sm">
-                  {draftHistoryData.map((row: any) => {
+                  {(draftHistoryData || []).map((row: any) => {
                     const style = TEAM_COLORS[row.team] || { bg: 'bg-slate-800', text: 'text-slate-200', border: 'border-slate-700' };
                     return (
                       <tr key={row.team} className="hover:bg-slate-800/30">
-                        <td className="py-3 px-4">
+                        <td className="py-3 px-4 font-semibold text-slate-200">
                           <span className={`px-2.5 py-1 rounded-md border font-medium text-xs ${style.bg} ${style.text} ${style.border}`}>
                             {row.team}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-center font-mono font-bold text-slate-200">{row.total}</td>
-                        {['James', 'Jash', 'Jack', 'Diriye', 'Karthik'].map((owner) => {
-                          const count = row.counts?.[owner] || 0;
-                          const cellStyle = getGradientStyle(count, minDraftCount, maxDraftCount);
+                        {allDraftSeasons.map((season) => {
+                          const owner = row.seasons ? row.seasons[season] : null;
                           return (
-                            <td key={owner} className="py-3 px-4 text-center">
-                              <span className={`inline-block px-2.5 py-0.5 rounded border font-mono text-xs ${cellStyle}`}>
-                                {count}
-                              </span>
+                            <td key={season} className="py-3 px-4 text-center font-medium text-slate-300">
+                              {owner ? (
+                                <span className="px-2.5 py-1 rounded bg-slate-800/80 border border-slate-700 text-xs text-slate-200">
+                                  {owner}
+                                </span>
+                              ) : (
+                                <span className="text-slate-600">—</span>
+                              )}
                             </td>
                           );
                         })}
@@ -682,100 +805,96 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* TAB 5: PAST SEASONS */}
+      {/* TAB 5: PAST SEASONS ARCHIVE */}
       {activeTab === 'pastSeasons' && (
         <div className="space-y-8">
           <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <h2 className="text-xl font-bold flex items-center gap-2">
-                <Calendar className="text-blue-400 h-5 w-5" /> Past Seasons Standings Archive
+                <Calendar className="text-blue-400 h-5 w-5" /> Historical Season Archive
               </h2>
-              <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
-                {Object.keys(pastSeasonsData).map((season) => (
-                  <button
-                    key={season}
-                    onClick={() => setSelectedSeason(season)}
-                    className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                      selectedSeason === season
-                        ? 'bg-blue-600 text-white shadow-md'
-                        : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    {season}
-                  </button>
-                ))}
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-medium text-slate-400">Select Season:</label>
+                <select
+                  value={selectedSeason}
+                  onChange={(e) => setSelectedSeason(e.target.value)}
+                  className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                >
+                  {Object.keys(pastSeasonsData).map((season) => (
+                    <option key={season} value={season}>{season}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse whitespace-nowrap">
-              <thead>
-                <tr className="border-b border-slate-800 text-slate-400 text-sm">
-                  <th className="py-3 px-3 font-semibold text-center">Draft</th>
-                  <th className="py-3 px-4 font-semibold">Owner</th>
-                  {['Rd 1', 'Rd 2', 'Rd 3', 'Rd 4', 'Rd 5', 'Rd 6'].map((rd) => (
-                    <th key={rd} className="py-3 px-3 font-semibold text-center">{rd}</th>
-                  ))}
-                  <th className="py-3 px-4 font-semibold text-center">Total Wins</th>
-                  <th className="py-3 px-4 font-semibold text-center">Win %</th>
-                  <th className="py-3 px-3 font-semibold text-center">Rank</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 text-sm">
-                {currentPastSeasonData.map((row: any) => {
-                  const totalWinsStyle = getGradientStyle(row.totalWins, minPastTotalWins, maxPastTotalWins);
-                  const rankStyle = getRankGradientStyle(row.rank);
-                  return (
-                    <tr key={row.owner} className="hover:bg-slate-800/30">
-                      <td className="py-4 px-3 font-mono text-slate-400 text-center">#{row.draftOrder}</td>
-                      <td className="py-4 px-4 font-semibold text-slate-200">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full overflow-hidden border border-slate-700 bg-slate-800 flex items-center justify-center shrink-0 shadow-sm relative">
-                            <img src={OWNER_AVATARS[row.owner]} alt="" className="w-full h-full object-cover relative z-10" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                          </div>
-                          <span>{row.owner}</span>
-                        </div>
-                      </td>
-                      {(row.teams || []).map((team: any, idx: number) => {
-                        const style = TEAM_COLORS[team.name] || { bg: 'bg-slate-800', text: 'text-slate-200', border: 'border-slate-700' };
-                        const teamWinStyle = getGradientStyle(team.wins, minPastWins, maxPastWins);
-                        return (
-                          <td key={idx} className="py-4 px-2 text-center">
-                            <div className="inline-flex items-center gap-1.5 p-1 rounded-lg bg-slate-950/60 border border-slate-800/80 shadow-sm">
-                              <span className={`px-2 py-0.5 rounded-md border font-medium text-xs ${style.bg} ${style.text} ${style.border}`}>
-                                {team.name}
-                              </span>
-                              <span className={`px-2 py-0.5 rounded-md border font-mono text-xs ${teamWinStyle}`}>
-                                {team.wins}
-                              </span>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse whitespace-nowrap">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-400 text-sm">
+                    <th className="py-3 px-3 font-semibold">Finish</th>
+                    <th className="py-3 px-4 font-semibold">Owner</th>
+                    {['Rd 1', 'Rd 2', 'Rd 3', 'Rd 4', 'Rd 5', 'Rd 6'].map((rd) => (
+                      <th key={rd} className="py-3 px-3 font-semibold text-center">{rd}</th>
+                    ))}
+                    <th className="py-3 px-4 font-semibold text-center">Total Wins</th>
+                    <th className="py-3 px-4 font-semibold text-center">Win %</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 text-sm">
+                  {(currentPastSeasonData || []).map((row: any, idx: number) => {
+                    const totalWinsStyle = getGradientStyle(row.totalWins, minPastTotalWins, maxPastTotalWins);
+                    const rankStyle = getRankGradientStyle(idx + 1);
+
+                    return (
+                      <tr key={row.owner} className="hover:bg-slate-800/30">
+                        <td className="py-4 px-3 text-center">
+                          <span className={`inline-block px-2.5 py-0.5 rounded-md border text-xs shadow-sm ${rankStyle}`}>
+                            #{idx + 1}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 font-semibold text-slate-200">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full overflow-hidden border border-slate-700 bg-slate-800 flex items-center justify-center shrink-0 shadow-sm relative">
+                              <img src={OWNER_AVATARS[row.owner]} alt="" className="w-full h-full object-cover relative z-10" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                             </div>
-                          </td>
-                        );
-                      })}
-                      <td className="py-4 px-4 text-center">
-                        <span className={`inline-block px-3 py-1 rounded-md border text-sm shadow-sm ${totalWinsStyle}`}>
-                          {row.totalWins}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-center font-mono">
-                        <span className="inline-block px-3 py-1 rounded-md border text-sm shadow-sm bg-slate-900 border-slate-700 text-slate-200">
-                          {row.winPct}
-                        </span>
-                      </td>
-                      <td className="py-4 px-3 text-center">
-                        <span className={`inline-block px-2.5 py-0.5 rounded-md border text-xs shadow-sm ${rankStyle}`}>
-                          #{row.rank}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
-    )}
-  </main>
+                            <span>{row.owner}</span>
+                          </div>
+                        </td>
+                        {(row.teams || []).map((team: any, tIdx: number) => {
+                          const style = TEAM_COLORS[team.name] || { bg: 'bg-slate-800', text: 'text-slate-200', border: 'border-slate-700' };
+                          const teamWinStyle = getGradientStyle(team.wins, minPastWins, maxPastWins);
+                          return (
+                            <td key={tIdx} className="py-4 px-2 text-center">
+                              <div className="inline-flex items-center gap-1.5 p-1 rounded-lg bg-slate-950/60 border border-slate-800/80 shadow-sm">
+                                <span className={`px-2 py-0.5 rounded-md border font-medium text-xs ${style.bg} ${style.text} ${style.border}`}>
+                                  {team.name}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded-md border font-mono text-xs ${teamWinStyle}`}>
+                                  {team.wins}
+                                </span>
+                              </div>
+                            </td>
+                          );
+                        })}
+                        <td className="py-4 px-4 text-center">
+                          <span className={`inline-block px-3 py-1 rounded-md border text-sm shadow-sm ${totalWinsStyle}`}>
+                            {row.totalWins}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-center font-mono">
+                          <span className="text-slate-300 font-semibold">
+                            {row.winPct}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      )}
+    </main>
   );
 }
