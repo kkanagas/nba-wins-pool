@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
+const CURRENT_ROSTERS_2026 = [
+  { owner: 'Diriye', teams: ['Oklahoma City', 'LA Lakers', 'Denver', 'Dallas', 'Golden State', 'Sacramento'] },
+  { owner: 'Jack', teams: ['San Antonio', 'Boston', 'Cleveland', 'Utah', 'Washington', 'Brooklyn'] },
+  { owner: 'James', teams: ['New York', 'Houston', 'Miami', 'Atlanta', 'Charlotte', 'Milwaukee'] },
+  { owner: 'Jash', teams: ['Philadelphia', 'Minnesota', 'Portland', 'Phoenix', 'New Orleans', 'Chicago'] },
+  { owner: 'Karthik', teams: ['Detroit', 'Toronto', 'Indiana', 'Orlando', 'Memphis', 'LA Clippers'] },
+];
+
 export async function GET() {
   try {
     const historyPath = path.join(process.cwd(), 'data', 'league-history.json');
@@ -39,19 +47,36 @@ export async function GET() {
       }
     }
 
+    // Map 2026-27 picks by team name for easy lookup
+    const teamToOwner2026: Record<string, string> = {};
+    CURRENT_ROSTERS_2026.forEach((roster) => {
+      roster.teams.forEach((teamName) => {
+        teamToOwner2026[teamName] = roster.owner;
+      });
+    });
+
     const owners = ['Diriye', 'Jack', 'James', 'Jash', 'Karthik'];
+    
+    // Inject 2026-27 into draftHistory items and re-calculate counts dynamically
     draftHistory = (draftHistory || []).map((item) => {
-      const counts: Record<string, number> = { Diriye: 0, Jack: 0, James: 0, Jash: 0, Karthik: 0 };
-      if (item.seasons) {
-        Object.values(item.seasons).forEach((ownerName: any) => {
-          if (owners.includes(ownerName)) {
-            counts[ownerName] = (counts[ownerName] || 0) + 1;
-          }
-        });
+      const seasons = { ...(item.seasons || {}) };
+      
+      // Automatically attach 2026-27 owner based on official rosters if present
+      if (teamToOwner2026[item.team]) {
+        seasons['2026-27'] = teamToOwner2026[item.team];
       }
+
+      const counts: Record<string, number> = { Diriye: 0, Jack: 0, James: 0, Jash: 0, Karthik: 0 };
+      Object.values(seasons).forEach((ownerName: any) => {
+        if (owners.includes(ownerName)) {
+          counts[ownerName] = (counts[ownerName] || 0) + 1;
+        }
+      });
+
       return {
         ...item,
-        counts: item.counts || counts,
+        seasons,
+        counts,
       };
     });
 

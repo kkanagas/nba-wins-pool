@@ -4,9 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
-import { Trophy, TrendingUp, Shield, ArrowUpDown, RefreshCw, History, Calendar, LayoutDashboard, Dices, PlayCircle } from 'lucide-react';
+import { Trophy, TrendingUp, Shield, ArrowUpDown, RefreshCw, History, Calendar, LayoutDashboard, Dices } from 'lucide-react';
 import DraftLottery from '@/components/DraftLottery';
-import DraftInterface, { PickRecord } from '@/components/DraftInterface';
 
 const OWNER_AVATARS: Record<string, string> = {
   Karthik: '/avatars/karthik.png',
@@ -89,14 +88,14 @@ const TEAM_COLORS: Record<string, { bg: string; text: string; border: string }> 
 };
 
 const DEFAULT_ROSTERS = [
-  { draftOrder: 1, owner: 'Karthik', teamNames: ['Celtics', 'Thunder', 'Knicks', 'Kings', 'Magic', 'Bulls'] },
-  { draftOrder: 2, owner: 'James', teamNames: ['Nuggets', 'Bucks', 'Lakers', 'Pacers', 'Heat', 'Rockets'] },
-  { draftOrder: 3, owner: 'Diriye', teamNames: ['Cavaliers', 'Suns', 'Mavericks', 'Timberwolves', 'Pelicans', 'Spurs'] },
-  { draftOrder: 4, owner: 'Jack', teamNames: ['76ers', 'Warriors', 'Clippers', 'Grizzlies', 'Hawks', 'Raptors'] },
-  { draftOrder: 5, owner: 'Jash', teamNames: ['Pistons', 'Nets', 'Jazz', 'Trail Blazers', 'Hornets', 'Wizards'] },
+  { draftOrder: 1, owner: 'Diriye', teamNames: ['Oklahoma City', 'LA Lakers', 'Denver', 'Dallas', 'Golden State', 'Sacramento'] },
+  { draftOrder: 2, owner: 'Jack', teamNames: ['San Antonio', 'Boston', 'Cleveland', 'Utah', 'Washington', 'Brooklyn'] },
+  { draftOrder: 3, owner: 'James', teamNames: ['New York', 'Houston', 'Miami', 'Atlanta', 'Charlotte', 'Milwaukee'] },
+  { draftOrder: 4, owner: 'Jash', teamNames: ['Philadelphia', 'Minnesota', 'Portland', 'Phoenix', 'New Orleans', 'Chicago'] },
+  { draftOrder: 5, owner: 'Karthik', teamNames: ['Detroit', 'Toronto', 'Indiana', 'Orlando', 'Memphis', 'LA Clippers'] },
 ];
 
-type TabType = 'live' | 'draftTab' | 'lottery' | 'leagueHistory' | 'draftHistory' | 'pastSeasons';
+type TabType = 'live' | 'leagueHistory' | 'draftHistory' | 'pastSeasons' | 'lottery';
 type SortField = 'draftOrder' | 'owner' | 'rd1' | 'rd2' | 'rd3' | 'rd4' | 'rd5' | 'rd6' | 'totalWins' | 'winPct' | 'winsRank' | 'pctRank';
 type HistorySortField = 'owner' | 'points' | 'wins' | 'winPct' | 'rings';
 type ChartType = 'wins' | 'winsRank' | 'winPct' | 'winPctRank';
@@ -130,11 +129,6 @@ export default function Dashboard() {
 
   const [currentRosters, setCurrentRosters] = useState(DEFAULT_ROSTERS);
 
-  // Lifted Draft & Lottery Persistent State
-  const [activeDraftOrder, setActiveDraftOrder] = useState<string[]>(['Karthik', 'James', 'Diriye', 'Jack', 'Jash']);
-  const [persistentDraftPicks, setPersistentDraftPicks] = useState<PickRecord[]>([]);
-
-  // Lifted Lottery State
   const [lotteryState, setLotteryState] = useState<{
     drumPool: any[];
     stage: 'idle' | 'drawing' | 'selecting' | 'complete';
@@ -156,6 +150,13 @@ export default function Dashboard() {
   });
 
   const [pastSeasonsData, setPastSeasonsData] = useState<any>({
+    "2026-27": [
+      { "draftOrder": 1, "owner": "Diriye", "teams": [{ "name": "Oklahoma City", "wins": 0 }, { "name": "LA Lakers", "wins": 0 }, { "name": "Denver", "wins": 0 }, { "name": "Dallas", "wins": 0 }, { "name": "Golden State", "wins": 0 }, { "name": "Sacramento", "wins": 0 }], "totalWins": 0, "winPct": ".000" },
+      { "draftOrder": 2, "owner": "Jack", "teams": [{ "name": "San Antonio", "wins": 0 }, { "name": "Boston", "wins": 0 }, { "name": "Cleveland", "wins": 0 }, { "name": "Utah", "wins": 0 }, { "name": "Washington", "wins": 0 }, { "name": "Brooklyn", "wins": 0 }], "totalWins": 0, "winPct": ".000" },
+      { "draftOrder": 3, "owner": "James", "teams": [{ "name": "New York", "wins": 0 }, { "name": "Houston", "wins": 0 }, { "name": "Miami", "wins": 0 }, { "name": "Atlanta", "wins": 0 }, { "name": "Charlotte", "wins": 0 }, { "name": "Milwaukee", "wins": 0 }], "totalWins": 0, "winPct": ".000" },
+      { "draftOrder": 4, "owner": "Jash", "teams": [{ "name": "Philadelphia", "wins": 0 }, { "name": "Minnesota", "wins": 0 }, { "name": "Portland", "wins": 0 }, { "name": "Phoenix", "wins": 0 }, { "name": "New Orleans", "wins": 0 }, { "name": "Chicago", "wins": 0 }], "totalWins": 0, "winPct": ".000" },
+      { "draftOrder": 5, "owner": "Karthik", "teams": [{ "name": "Detroit", "wins": 0 }, { "name": "Toronto", "wins": 0 }, { "name": "Indiana", "wins": 0 }, { "name": "Orlando", "wins": 0 }, { "name": "Memphis", "wins": 0 }, { "name": "LA Clippers", "wins": 0 }], "totalWins": 0, "winPct": ".000" }
+    ],
     "2025-26": [
       { "draftOrder": 1, "owner": "Jack", "teams": [{ "name": "Oklahoma City", "wins": 64 }, { "name": "Detroit", "wins": 60 }, { "name": "Golden State", "wins": 37 }, { "name": "Chicago", "wins": 31 }, { "name": "Portland", "wins": 42 }, { "name": "Washington", "wins": 17 }], "totalWins": 251, "winPct": ".510" },
       { "draftOrder": 2, "owner": "Jash", "teams": [{ "name": "Cleveland", "wins": 52 }, { "name": "LA Clippers", "wins": 42 }, { "name": "LA Lakers", "wins": 53 }, { "name": "Philadelphia", "wins": 45 }, { "name": "Boston", "wins": 56 }, { "name": "Utah", "wins": 22 }], "totalWins": 270, "winPct": ".549" },
@@ -213,7 +214,7 @@ export default function Dashboard() {
       { "draftOrder": 5, "owner": "Jash", "teams": [{ "name": "Utah", "wins": 50 }, { "name": "Philadelphia", "wins": 51 }, { "name": "Washington", "wins": 32 }, { "name": "Miami", "wins": 39 }, { "name": "Cleveland", "wins": 19 }, { "name": "New York", "wins": 17 }], "totalWins": 208, "winPct": ".423" }
     ]
   });
-  const [selectedSeason, setSelectedSeason] = useState<string>('2025-26');
+  const [selectedSeason, setSelectedSeason] = useState<string>('2026-27');
 
   const recordDailySnapshot = async (currentWins: Record<string, number>, currentLosses: Record<string, number>) => {
     const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
@@ -290,16 +291,6 @@ export default function Dashboard() {
     fetchHistoricalData();
   }, []);
 
-  const handleFinalizeDraftRosters = (rosterMap: Record<string, string[]>) => {
-    const updated = activeDraftOrder.map((owner, idx) => ({
-      draftOrder: idx + 1,
-      owner,
-      teamNames: rosterMap[owner] || [],
-    }));
-    setCurrentRosters(updated);
-    setActiveTab('live');
-  };
-
   const standingsData = currentRosters.map((roster) => {
     const rounds = roster.teamNames.map((name) => {
       const wins = liveWins[name] !== undefined ? liveWins[name] : 0;
@@ -330,7 +321,20 @@ export default function Dashboard() {
   const sortedByPct = [...standingsData].sort((a, b) => b.winPct - a.winPct);
   sortedByPct.forEach((item, index) => { item.pctRank = index + 1; });
 
-  const finalSnapshotsByDate = history.reduce<Record<string, any>>((acc, entry) => {
+  // Ensure Oct 20 baseline starting point
+  const baselineDate = 'Oct 20';
+  const rawHistory = [...history];
+  const hasOct20 = rawHistory.some((entry: any) => entry.date === baselineDate);
+  if (!hasOct20) {
+    const baselineSnapshot: Record<string, any> = { date: baselineDate };
+    currentRosters.forEach((roster) => {
+      baselineSnapshot[roster.owner] = 0;
+      baselineSnapshot[`${roster.owner}_losses`] = 0;
+    });
+    rawHistory.unshift(baselineSnapshot);
+  }
+
+  const finalSnapshotsByDate = rawHistory.reduce<Record<string, any>>((acc, entry) => {
     if (entry && entry.date) {
       acc[entry.date] = entry;
     }
@@ -362,13 +366,21 @@ export default function Dashboard() {
     });
 
     const sortedByWinEntry = [...ownersList].sort((a, b) => (entry[b] || 0) - (entry[a] || 0));
+    let currentRank = 1;
     sortedByWinEntry.forEach((owner, idx) => {
-      entryCopy[`${owner}_winsRank`] = idx + 1;
+      if (idx > 0 && (entry[sortedByWinEntry[idx]] || 0) < (entry[sortedByWinEntry[idx - 1]] || 0)) {
+        currentRank = idx + 1;
+      }
+      entryCopy[`${owner}_winsRank`] = currentRank;
     });
 
     const sortedByPctEntry = [...ownersList].sort((a, b) => (entryCopy[`${b}_pct`] || 0) - (entryCopy[`${a}_pct`] || 0));
+    let currentPctRank = 1;
     sortedByPctEntry.forEach((owner, idx) => {
-      entryCopy[`${owner}_pctRank`] = idx + 1;
+      if (idx > 0 && (entryCopy[`${sortedByPctEntry[idx]}_pct`] || 0) < (entryCopy[`${sortedByPctEntry[idx - 1]}_pct`] || 0)) {
+        currentPctRank = idx + 1;
+      }
+      entryCopy[`${owner}_pctRank`] = currentPctRank;
     });
 
     return entryCopy;
@@ -465,7 +477,7 @@ export default function Dashboard() {
   const processedPastSeasonData = rawPastSeasonData.map((row: any) => {
     const finish = pastSeasonWithWinsSorted.findIndex((item) => item.owner === row.owner) + 1;
     const rawPct = row.winPct;
-    const winPctNum = typeof rawPct === 'string' ? parseFloat(rawPct.startsWith('.') ? `0${rawPct}` : rawPct) : (raw || 0);
+    const winPctNum = typeof rawPct === 'string' ? parseFloat(rawPct.startsWith('.') ? `0${rawPct}` : rawPct) : (rawPct || 0);
 
     return {
       ...row,
@@ -547,6 +559,18 @@ export default function Dashboard() {
   const minDraftCount = allDraftCounts.length > 0 ? Math.min(...allDraftCounts) : 0;
   const maxDraftCount = allDraftCounts.length > 0 ? Math.max(...allDraftCounts) : 5;
 
+  const pastTeamWins = sortedPastSeasonData.flatMap((s: any) => (s.teams || []).map((t: any) => t.wins));
+  const minPastWins = pastTeamWins.length > 0 ? Math.min(...pastTeamWins) : 0;
+  const maxPastWins = pastTeamWins.length > 0 ? Math.max(...pastTeamWins) : 82;
+
+  const pastTotalWinsArr = sortedPastSeasonData.map((s: any) => s.totalWins);
+  const minPastTotalWins = pastTotalWinsArr.length > 0 ? Math.min(...pastTotalWinsArr) : 0;
+  const maxPastTotalWins = pastTotalWinsArr.length > 0 ? Math.max(...pastTotalWinsArr) : 300;
+
+  const pastWinPctArr = sortedPastSeasonData.map((s: any) => s.winPctNum);
+  const minPastWinPct = pastWinPctArr.length > 0 ? Math.min(...pastWinPctArr) : 0;
+  const maxPastWinPct = pastWinPctArr.length > 0 ? Math.max(...pastWinPctArr) : 1;
+
   function formatWinPct(pct: number) {
     const formatted = pct.toFixed(3);
     return formatted.startsWith('0') ? formatted.substring(1) : formatted;
@@ -584,7 +608,7 @@ export default function Dashboard() {
 
   const allDraftSeasons = draftHistoryData.length > 0 && draftHistoryData[0].seasons
     ? Object.keys(draftHistoryData[0].seasons)
-    : ['2018-19', '2019-20', '2020-21', '2021-22', '2022-23', '2023-24', '2024-25', '2025-26'];
+    : ['2018-19', '2019-20', '2020-21', '2021-22', '2022-23', '2023-24', '2024-25', '2025-26', '2026-27'];
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8 max-w-[98rem] mx-auto space-y-8">
@@ -592,9 +616,9 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-800 pb-6 gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-3">
-            <Trophy className="text-amber-400 h-8 w-8" /> NBA Chat Wins Pool
+            <Trophy className="text-amber-400 h-8 w-8" /> 2026-27 NBA Wins Pool
           </h1>
-          <p className="text-slate-400 mt-1">Live Dashboard, Draft Interface & Historical Archives</p>
+          <p className="text-slate-400 mt-1">Live Regular Season Tracker & Historical Archives</p>
         </div>
         <div className="flex items-center gap-3">
           <button 
@@ -621,27 +645,7 @@ export default function Dashboard() {
               : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
           }`}
         >
-          <LayoutDashboard className="h-4 w-4" /> 2026-27 Live Dashboard
-        </button>
-        <button
-          onClick={() => setActiveTab('draftTab')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all cursor-pointer ${
-            activeTab === 'draftTab' 
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
-              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-          }`}
-        >
-          <PlayCircle className="h-4 w-4 text-emerald-400" /> Live Draft Interface
-        </button>
-        <button
-          onClick={() => setActiveTab('lottery')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all cursor-pointer ${
-            activeTab === 'lottery' 
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
-              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-          }`}
-        >
-          <Dices className="h-4 w-4" /> Draft Lottery
+          <LayoutDashboard className="h-4 w-4" /> Live Dashboard
         </button>
         <button
           onClick={() => setActiveTab('leagueHistory')}
@@ -672,6 +676,16 @@ export default function Dashboard() {
           }`}
         >
           <Calendar className="h-4 w-4" /> Past Seasons
+        </button>
+        <button
+          onClick={() => setActiveTab('lottery')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all cursor-pointer ${
+            activeTab === 'lottery' 
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
+              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+          }`}
+        >
+          <Dices className="h-4 w-4" /> Draft Lottery Simulator
         </button>
       </div>
 
@@ -845,37 +859,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* TAB 2: LIVE DRAFT INTERFACE */}
-      {activeTab === 'draftTab' && (
-        <DraftInterface
-          draftOrder={activeDraftOrder}
-          draftPicks={persistentDraftPicks}
-          setDraftPicks={setPersistentDraftPicks}
-          onFinalizeDraft={handleFinalizeDraftRosters}
-        />
-      )}
-
-      {/* TAB 3: DRAFT LOTTERY SIMULATOR */}
-      {activeTab === 'lottery' && (
-        <div className="space-y-8">
-          <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
-            <DraftLottery
-              lotteryState={lotteryState}
-              setLotteryState={setLotteryState}
-              onLockLottery={(results) => {
-                setActiveDraftOrder(results);
-                setActiveTab('draftTab');
-              }}
-              onResetLottery={() => {
-                setActiveDraftOrder(['Karthik', 'James', 'Diriye', 'Jack', 'Jash']);
-                setPersistentDraftPicks([]);
-              }}
-            />
-          </section>
-        </div>
-      )}
-
-      {/* TAB 4: LEAGUE HISTORY */}
+      {/* TAB 2: LEAGUE HISTORY */}
       {activeTab === 'leagueHistory' && (
         <div className="space-y-8">
           <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl">
@@ -961,7 +945,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* TAB 5: DRAFT HISTORY */}
+      {/* TAB 3: DRAFT HISTORY */}
       {activeTab === 'draftHistory' && (
         <div className="space-y-8">
           <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl">
@@ -1063,7 +1047,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* TAB 6: PAST SEASONS ARCHIVE */}
+      {/* TAB 4: PAST SEASONS ARCHIVE */}
       {activeTab === 'pastSeasons' && (
         <div className="space-y-8">
           <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl">
@@ -1165,6 +1149,20 @@ export default function Dashboard() {
                 </tbody>
               </table>
             </div>
+          </section>
+        </div>
+      )}
+
+      {/* TAB 5: DRAFT LOTTERY SIMULATOR */}
+      {activeTab === 'lottery' && (
+        <div className="space-y-8">
+          <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+            <DraftLottery
+              lotteryState={lotteryState}
+              setLotteryState={setLotteryState}
+              onLockLottery={() => {}}
+              onResetLottery={() => {}}
+            />
           </section>
         </div>
       )}

@@ -1,9 +1,25 @@
 import { NextResponse } from 'next/server';
 
+const REGULAR_SEASON_START = new Date('2026-10-20T00:00:00Z');
+
 export async function GET() {
   try {
+    const today = new Date();
+
+    // Guard: Force 0 wins/losses before regular season tips off on Oct 20, 2026
+    if (today < REGULAR_SEASON_START) {
+      return NextResponse.json({
+        success: true,
+        timestamp: new Date().toISOString(),
+        source: 'preseason-guard',
+        wins: {},
+        losses: {},
+      });
+    }
+
+    // Explicitly query regular season standings (seasontype=2)
     const response = await fetch(
-      'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings',
+      'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings?seasontype=2',
       { cache: 'no-store' }
     );
 
