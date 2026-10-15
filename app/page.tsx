@@ -8,11 +8,11 @@ import { Trophy, TrendingUp, Shield, ArrowUpDown, RefreshCw, History, Calendar, 
 import DraftLottery from '@/components/DraftLottery';
 
 const OWNER_AVATARS: Record<string, string> = {
-  Karthik: '/avatars/karthik.png',
-  James: '/avatars/james.png',
-  Diriye: '/avatars/diriye.png',
-  Jack: '/avatars/jack.png',
-  Jash: '/avatars/jash.png',
+  Karthik: '/avatars/Karthik.png',
+  James: '/avatars/James.png',
+  Diriye: '/avatars/Diriye.png',
+  Jack: '/avatars/Jack.png',
+  Jash: '/avatars/Jash.png',
 };
 
 const PLAYER_COLORS: Record<string, string> = {
