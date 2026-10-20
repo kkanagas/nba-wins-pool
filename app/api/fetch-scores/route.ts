@@ -27,7 +27,6 @@ export async function GET() {
           let wins = 0;
           let losses = 0;
 
-          // Method 1: Parse from records summary string (e.g. "1-0")
           for (const record of records) {
             if (record.summary && typeof record.summary === 'string' && record.summary.includes('-')) {
               const parts = record.summary.split('-');
@@ -42,7 +41,6 @@ export async function GET() {
             }
           }
 
-          // Method 2: Fallback check if records array uses 'wins' and 'losses' objects explicitly
           if (wins === 0 && losses === 0 && Array.isArray(records)) {
             const wObj = records.find((r: any) => r.name === 'Wins' || r.type === 'wins');
             const lObj = records.find((r: any) => r.name === 'Losses' || r.type === 'losses');
