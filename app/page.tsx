@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { Trophy, TrendingUp, Shield, ArrowUpDown, RefreshCw, History, Calendar, LayoutDashboard, Dices } from 'lucide-react';
 import DraftLottery from '@/components/DraftLottery';
+import CanadiansTab from '@/components/CanadiansTab';
 
 const OWNER_AVATARS: Record<string, string> = {
   Karthik: '/Avatars/Karthik.png',
@@ -95,7 +96,7 @@ const DEFAULT_ROSTERS = [
   { draftOrder: 5, owner: 'Karthik', teamNames: ['Detroit', 'Toronto', 'Indiana', 'Orlando', 'Memphis', 'LA Clippers'] },
 ];
 
-type TabType = 'live' | 'leagueHistory' | 'draftHistory' | 'pastSeasons' | 'lottery';
+type TabType = 'live' | 'leagueHistory' | 'draftHistory' | 'pastSeasons' | 'lottery' | 'canadians';
 type SortField = 'draftOrder' | 'owner' | 'rd1' | 'rd2' | 'rd3' | 'rd4' | 'rd5' | 'rd6' | 'totalWins' | 'winPct' | 'winsRank' | 'pctRank';
 type HistorySortField = 'owner' | 'points' | 'wins' | 'winPct' | 'rings';
 type ChartType = 'wins' | 'winsRank' | 'winPct' | 'winPctRank';
@@ -321,7 +322,6 @@ export default function Dashboard() {
   const sortedByPct = [...standingsData].sort((a, b) => b.winPct - a.winPct);
   sortedByPct.forEach((item, index) => { item.pctRank = index + 1; });
 
-  // Ensure Oct 20 baseline starting point
   const baselineDate = 'Oct 20';
   const rawHistory = [...history];
   const hasOct20 = rawHistory.some((entry: any) => entry.date === baselineDate);
@@ -676,6 +676,16 @@ export default function Dashboard() {
           }`}
         >
           <Calendar className="h-4 w-4" /> Past Seasons
+        </button>
+        <button
+          onClick={() => setActiveTab('canadians')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all cursor-pointer ${
+            activeTab === 'canadians' 
+              ? 'bg-red-600 text-white shadow-lg shadow-red-500/20' 
+              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+          }`}
+        >
+          🇨🇦 Canadians
         </button>
         <button
           onClick={() => setActiveTab('lottery')}
@@ -1149,6 +1159,15 @@ export default function Dashboard() {
                 </tbody>
               </table>
             </div>
+          </section>
+        </div>
+      )}
+
+      {/* TAB: CANADIANS IN THE NBA */}
+      {activeTab === 'canadians' && (
+        <div className="space-y-8">
+          <section className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+            <CanadiansTab />
           </section>
         </div>
       )}
