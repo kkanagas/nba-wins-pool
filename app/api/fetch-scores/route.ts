@@ -19,47 +19,34 @@ export async function GET() {
       data.events.forEach((event: any) => {
         const competition = event?.competitions?.[0];
         const competitors = competition?.competitors || [];
-        
-        competitors.forEach((competitor: any) => {
-          const teamName = competitor?.team?.name;
-          const records = competitor?.records || [];
-          
-          let wins = 0;
-          let losses = 0;
+        const isCompleted = competition?.status?.type?.completed;
 
-          for (const record of records) {
-            if (record.summary && typeof record.summary === 'string' && record.summary.includes('-')) {
-              const parts = record.summary.split('-');
-              if (parts.length === 2) {
-                const parsedWins = parseInt(parts[0], 10);
-                const parsedLosses = parseInt(parts[1], 10);
-                if (!isNaN(parsedWins) && !isNaN(parsedLosses)) {
-                  wins = parsedWins;
-                  losses = parsedLosses;
-                }
+        // Only process games that have actually gone final
+        if (isCompleted) {
+          competitors.forEach((competitor: any) => {
+            const teamName = competitor?.team?.name; // e.g., "Pistons", "Celtics"
+            const winner = competitor?.winner; // boolean true/false
+
+            if (teamName) {
+              // Initialize if not present
+              if (teamWins[teamName] === undefined) teamWins[teamName] = 0;
+              if (teamLosses[teamName] === undefined) teamLosses[teamName] = 0;
+
+              if (winner === true) {
+                teamWins[teamName] += 1;
+              } else if (winner === false) {
+                teamLosses[teamName] += 1;
               }
             }
-          }
-
-          if (wins === 0 && losses === 0 && Array.isArray(records)) {
-            const wObj = records.find((r: any) => r.name === 'Wins' || r.type === 'wins');
-            const lObj = records.find((r: any) => r.name === 'Losses' || r.type === 'losses');
-            if (wObj) wins = parseInt(wObj.value, 10) || 0;
-            if (lObj) losses = parseInt(lObj.value, 10) || 0;
-          }
-
-          if (teamName) {
-            teamWins[teamName] = wins;
-            teamLosses[teamName] = losses;
-          }
-        });
+          });
+        }
       });
     }
 
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
-      source: 'espn-scoreboard-robust',
+      source: 'espn-live-status-parser',
       wins: teamWins,
       losses: teamLosses,
     });
