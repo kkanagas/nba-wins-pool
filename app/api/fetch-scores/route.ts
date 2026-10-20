@@ -1,25 +1,10 @@
 import { NextResponse } from 'next/server';
 
-const REGULAR_SEASON_START = new Date('2026-10-20T00:00:00Z');
-
 export async function GET() {
   try {
-    const today = new Date();
-
-    // Guard: Force 0 wins/losses before regular season tips off on Oct 20, 2026
-    if (today < REGULAR_SEASON_START) {
-      return NextResponse.json({
-        success: true,
-        timestamp: new Date().toISOString(),
-        source: 'preseason-guard',
-        wins: {},
-        losses: {},
-      });
-    }
-
-    // Explicitly query regular season standings (seasontype=2)
+    // Fetch directly from the live scoreboard endpoint instead of waiting on the slow standings table
     const response = await fetch(
-      'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings?seasontype=2',
+      'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard',
       { cache: 'no-store' }
     );
 
@@ -31,31 +16,39 @@ export async function GET() {
     const teamWins: Record<string, number> = {};
     const teamLosses: Record<string, number> = {};
 
-    if (data?.children) {
-      data.children.forEach((conference: any) => {
-        const entries = conference?.standings?.entries || [];
-        entries.forEach((entry: any) => {
-          const teamName = entry?.team?.name;
-          const stats = entry?.stats || [];
+    // Parse live events/games from the scoreboard
+    if (data?.events) {
+      data.events.forEach((event: any) => {
+        const competition = event?.competitions?.[0];
+        const competitors = competition?.competitors || [];
+        
+        // Only process if the game is final or currently in progress
+        const statusType = competition?.status?.type?.completed;
+        
+        competitors.forEach((competitor: any) => {
+          const teamName = competitor?.team?.name;
+          const records = competitor?.records || [];
           
-          const winsStat = stats.find((s: any) => s.name === 'wins' || s.type === 'wins');
-          const lossesStat = stats.find((s: any) => s.name === 'losses' || s.type === 'losses');
+          // Try to extract wins/losses from the game record or competitor stats
+          const overallRecord = records.find((r: any) => r.type === 'total' || r.name === 'overall');
           
-          const wins = winsStat ? parseInt(winsStat.value, 10) : 0;
-          const losses = lossesStat ? parseInt(lossesStat.value, 10) : 0;
-
-          if (teamName) {
-            teamWins[teamName] = wins;
-            teamLosses[teamName] = losses;
+          if (teamName && overallRecord) {
+            // ESPN summary record format is usually "W-L" (e.g., "1-0")
+            const parts = overallRecord.summary?.split('-');
+            if (parts && parts.length === 2) {
+              teamWins[teamName] = parseInt(parts[0], 10) || 0;
+              teamLosses[teamName] = parseInt(parts[1], 10) || 0;
+            }
           }
         });
       });
     }
 
+    // Fallback or safety check: if scoreboard didn't yield records yet, initialize defaults
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
-      source: 'espn-api',
+      source: 'espn-scoreboard',
       wins: teamWins,
       losses: teamLosses,
     });
