@@ -88,6 +88,40 @@ const TEAM_COLORS: Record<string, { bg: string; text: string; border: string }> 
   Washington: { bg: 'bg-blue-950/90', text: 'text-red-300', border: 'border-blue-700/50' },
 };
 
+// Team name mapping helper to translate between location names and nicknames
+const TEAM_NAME_MAP: Record<string, string[]> = {
+  'Detroit': ['Detroit', 'Pistons', 'Detroit Pistons'],
+  'Toronto': ['Toronto', 'Raptors', 'Toronto Raptors'],
+  'Indiana': ['Indiana', 'Pacers', 'Indiana Pacers'],
+  'Orlando': ['Orlando', 'Magic', 'Orlando Magic'],
+  'Memphis': ['Memphis', 'Grizzlies', 'Memphis Grizzlies'],
+  'LA Clippers': ['LA Clippers', 'Clippers', 'Los Angeles Clippers'],
+  'Oklahoma City': ['Oklahoma City', 'Thunder', 'Oklahoma City Thunder'],
+  'LA Lakers': ['LA Lakers', 'Lakers', 'Los Angeles Lakers'],
+  'Denver': ['Denver', 'Nuggets', 'Denver Nuggets'],
+  'Dallas': ['Dallas', 'Mavericks', 'Dallas Mavericks'],
+  'Golden State': ['Golden State', 'Warriors', 'Golden State Warriors'],
+  'Sacramento': ['Sacramento', 'Kings', 'Sacramento Kings'],
+  'San Antonio': ['San Antonio', 'Spurs', 'San Antonio Spurs'],
+  'Boston': ['Boston', 'Celtics', 'Boston Celtics'],
+  'Cleveland': ['Cleveland', 'Cavaliers', 'Cleveland Cavaliers'],
+  'Utah': ['Utah', 'Jazz', 'Utah Jazz'],
+  'Washington': ['Washington', 'Wizards', 'Washington Wizards'],
+  'Brooklyn': ['Brooklyn', 'Nets', 'Brooklyn Nets'],
+  'New York': ['New York', 'Knicks', 'New York Knicks'],
+  'Houston': ['Houston', 'Rockets', 'Houston Rockets'],
+  'Miami': ['Miami', 'Heat', 'Miami Heat'],
+  'Atlanta': ['Atlanta', 'Hawks', 'Atlanta Hawks'],
+  'Charlotte': ['Charlotte', 'Hornets', 'Charlotte Hornets'],
+  'Milwaukee': ['Milwaukee', 'Bucks', 'Milwaukee Bucks'],
+  'Philadelphia': ['Philadelphia', '76ers', 'Philadelphia 76ers'],
+  'Minnesota': ['Minnesota', 'Timberwolves', 'Minnesota Timberwolves'],
+  'Portland': ['Portland', 'Trail Blazers', 'Blazers', 'Portland Trail Blazers'],
+  'Phoenix': ['Phoenix', 'Suns', 'Phoenix Suns'],
+  'New Orleans': ['New Orleans', 'Pelicans', 'New Orleans Pelicans'],
+  'Chicago': ['Chicago', 'Bulls', 'Chicago Bulls'],
+};
+
 const DEFAULT_ROSTERS = [
   { draftOrder: 1, owner: 'Diriye', teamNames: ['Oklahoma City', 'LA Lakers', 'Denver', 'Dallas', 'Golden State', 'Sacramento'] },
   { draftOrder: 2, owner: 'Jack', teamNames: ['San Antonio', 'Boston', 'Cleveland', 'Utah', 'Washington', 'Brooklyn'] },
@@ -217,6 +251,16 @@ export default function Dashboard() {
   });
   const [selectedSeason, setSelectedSeason] = useState<string>('2026-27');
 
+  // Helper to extract wins for a team name regardless of location vs nickname format
+  const getTeamStat = (teamName: string, statObj: Record<string, number>): number => {
+    if (statObj[teamName] !== undefined) return statObj[teamName];
+    const aliases = TEAM_NAME_MAP[teamName] || [];
+    for (const alias of aliases) {
+      if (statObj[alias] !== undefined) return statObj[alias];
+    }
+    return 0;
+  };
+
   const recordDailySnapshot = async (currentWins: Record<string, number>, currentLosses: Record<string, number>) => {
     const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
     try {
@@ -233,8 +277,8 @@ export default function Dashboard() {
 
       const snapshot: Record<string, any> = { date: todayStr };
       currentRosters.forEach((roster) => {
-        const ownerWins = roster.teamNames.reduce((acc, name) => acc + (currentWins[name] || 0), 0);
-        const ownerLosses = roster.teamNames.reduce((acc, name) => acc + (currentLosses[name] || 0), 0);
+        const ownerWins = roster.teamNames.reduce((acc, name) => acc + getTeamStat(name, currentWins), 0);
+        const ownerLosses = roster.teamNames.reduce((acc, name) => acc + getTeamStat(name, currentLosses), 0);
         snapshot[roster.owner] = ownerWins;
         snapshot[`${roster.owner}_losses`] = ownerLosses;
       });
@@ -294,8 +338,8 @@ export default function Dashboard() {
 
   const standingsData = currentRosters.map((roster) => {
     const rounds = roster.teamNames.map((name) => {
-      const wins = liveWins[name] !== undefined ? liveWins[name] : 0;
-      const losses = liveLosses[name] !== undefined ? liveLosses[name] : 0;
+      const wins = getTeamStat(name, liveWins);
+      const losses = getTeamStat(name, liveLosses);
       return { name, wins, losses };
     });
 
@@ -328,11 +372,11 @@ export default function Dashboard() {
     item.pctRank = uniquePct.indexOf(item.winPct) + 1;
   });
 
-  // Baseline Oct 20 setup & filter pre-season dates out
+  // Baseline Oct 20 setup
   const baselineDate = 'Oct 20';
-  let rawHistory = [...history].filter((entry: any) => entry && entry.date && entry.date >= baselineDate);
+  let rawHistory = [...history];
 
-  const hasOct20 = rawHistory.some((entry: any) => entry.date === baselineDate);
+  const hasOct20 = rawHistory.some((entry: any) => entry && entry.date === baselineDate);
   if (!hasOct20) {
     const baselineSnapshot: Record<string, any> = { date: baselineDate };
     currentRosters.forEach((roster) => {
@@ -373,7 +417,6 @@ export default function Dashboard() {
       entryCopy[`${owner}_pct`] = totalGames > 0 ? wins / totalGames : 0;
     });
 
-    // Tie-aware Rank for Wins in History Chart
     const allWinsVals = ownersList.map((owner) => entry[owner] || 0);
     const uniqueEntryWins = Array.from(new Set(allWinsVals)).sort((a, b) => b - a);
     ownersList.forEach((owner) => {
@@ -381,7 +424,6 @@ export default function Dashboard() {
       entryCopy[`${owner}_winsRank`] = uniqueEntryWins.indexOf(wins) + 1;
     });
 
-    // Tie-aware Rank for Win % in History Chart
     const allPctVals = ownersList.map((owner) => entryCopy[`${owner}_pct`] || 0);
     const uniqueEntryPct = Array.from(new Set(allPctVals)).sort((a, b) => b - a);
     ownersList.forEach((owner) => {
