@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
-    // Fetch directly from the live scoreboard endpoint instead of waiting on the slow standings table
     const response = await fetch(
       'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard',
       { cache: 'no-store' }
@@ -16,39 +15,53 @@ export async function GET() {
     const teamWins: Record<string, number> = {};
     const teamLosses: Record<string, number> = {};
 
-    // Parse live events/games from the scoreboard
     if (data?.events) {
       data.events.forEach((event: any) => {
         const competition = event?.competitions?.[0];
         const competitors = competition?.competitors || [];
         
-        // Only process if the game is final or currently in progress
-        const statusType = competition?.status?.type?.completed;
-        
         competitors.forEach((competitor: any) => {
           const teamName = competitor?.team?.name;
           const records = competitor?.records || [];
           
-          // Try to extract wins/losses from the game record or competitor stats
-          const overallRecord = records.find((r: any) => r.type === 'total' || r.name === 'overall');
-          
-          if (teamName && overallRecord) {
-            // ESPN summary record format is usually "W-L" (e.g., "1-0")
-            const parts = overallRecord.summary?.split('-');
-            if (parts && parts.length === 2) {
-              teamWins[teamName] = parseInt(parts[0], 10) || 0;
-              teamLosses[teamName] = parseInt(parts[1], 10) || 0;
+          let wins = 0;
+          let losses = 0;
+
+          // Method 1: Parse from records summary string (e.g. "1-0")
+          for (const record of records) {
+            if (record.summary && typeof record.summary === 'string' && record.summary.includes('-')) {
+              const parts = record.summary.split('-');
+              if (parts.length === 2) {
+                const parsedWins = parseInt(parts[0], 10);
+                const parsedLosses = parseInt(parts[1], 10);
+                if (!isNaN(parsedWins) && !isNaN(parsedLosses)) {
+                  wins = parsedWins;
+                  losses = parsedLosses;
+                }
+              }
             }
+          }
+
+          // Method 2: Fallback check if records array uses 'wins' and 'losses' objects explicitly
+          if (wins === 0 && losses === 0 && Array.isArray(records)) {
+            const wObj = records.find((r: any) => r.name === 'Wins' || r.type === 'wins');
+            const lObj = records.find((r: any) => r.name === 'Losses' || r.type === 'losses');
+            if (wObj) wins = parseInt(wObj.value, 10) || 0;
+            if (lObj) losses = parseInt(lObj.value, 10) || 0;
+          }
+
+          if (teamName) {
+            teamWins[teamName] = wins;
+            teamLosses[teamName] = losses;
           }
         });
       });
     }
 
-    // Fallback or safety check: if scoreboard didn't yield records yet, initialize defaults
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
-      source: 'espn-scoreboard',
+      source: 'espn-scoreboard-robust',
       wins: teamWins,
       losses: teamLosses,
     });
