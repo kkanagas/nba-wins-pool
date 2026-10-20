@@ -316,14 +316,22 @@ export default function Dashboard() {
     };
   });
 
-  const sortedByWins = [...standingsData].sort((a, b) => b.totalWins - a.totalWins);
-  sortedByWins.forEach((item, index) => { item.winsRank = index + 1; });
+  // Tie-aware Wins Ranking (Standard Competition Rank)
+  const uniqueWins = Array.from(new Set(standingsData.map((s) => s.totalWins))).sort((a, b) => b - a);
+  standingsData.forEach((item) => {
+    item.winsRank = uniqueWins.indexOf(item.totalWins) + 1;
+  });
 
-  const sortedByPct = [...standingsData].sort((a, b) => b.winPct - a.winPct);
-  sortedByPct.forEach((item, index) => { item.pctRank = index + 1; });
+  // Tie-aware Win % Ranking (Standard Competition Rank)
+  const uniquePct = Array.from(new Set(standingsData.map((s) => s.winPct))).sort((a, b) => b - a);
+  standingsData.forEach((item) => {
+    item.pctRank = uniquePct.indexOf(item.winPct) + 1;
+  });
 
+  // Baseline Oct 20 setup & filter pre-season dates out
   const baselineDate = 'Oct 20';
-  const rawHistory = [...history];
+  let rawHistory = [...history].filter((entry: any) => entry && entry.date && entry.date >= baselineDate);
+
   const hasOct20 = rawHistory.some((entry: any) => entry.date === baselineDate);
   if (!hasOct20) {
     const baselineSnapshot: Record<string, any> = { date: baselineDate };
@@ -365,22 +373,20 @@ export default function Dashboard() {
       entryCopy[`${owner}_pct`] = totalGames > 0 ? wins / totalGames : 0;
     });
 
-    const sortedByWinEntry = [...ownersList].sort((a, b) => (entry[b] || 0) - (entry[a] || 0));
-    let currentRank = 1;
-    sortedByWinEntry.forEach((owner, idx) => {
-      if (idx > 0 && (entry[sortedByWinEntry[idx]] || 0) < (entry[sortedByWinEntry[idx - 1]] || 0)) {
-        currentRank = idx + 1;
-      }
-      entryCopy[`${owner}_winsRank`] = currentRank;
+    // Tie-aware Rank for Wins in History Chart
+    const allWinsVals = ownersList.map((owner) => entry[owner] || 0);
+    const uniqueEntryWins = Array.from(new Set(allWinsVals)).sort((a, b) => b - a);
+    ownersList.forEach((owner) => {
+      const wins = entry[owner] || 0;
+      entryCopy[`${owner}_winsRank`] = uniqueEntryWins.indexOf(wins) + 1;
     });
 
-    const sortedByPctEntry = [...ownersList].sort((a, b) => (entryCopy[`${b}_pct`] || 0) - (entryCopy[`${a}_pct`] || 0));
-    let currentPctRank = 1;
-    sortedByPctEntry.forEach((owner, idx) => {
-      if (idx > 0 && (entryCopy[`${sortedByPctEntry[idx]}_pct`] || 0) < (entryCopy[`${sortedByPctEntry[idx - 1]}_pct`] || 0)) {
-        currentPctRank = idx + 1;
-      }
-      entryCopy[`${owner}_pctRank`] = currentPctRank;
+    // Tie-aware Rank for Win % in History Chart
+    const allPctVals = ownersList.map((owner) => entryCopy[`${owner}_pct`] || 0);
+    const uniqueEntryPct = Array.from(new Set(allPctVals)).sort((a, b) => b - a);
+    ownersList.forEach((owner) => {
+      const pct = entryCopy[`${owner}_pct`] || 0;
+      entryCopy[`${owner}_pctRank`] = uniqueEntryPct.indexOf(pct) + 1;
     });
 
     return entryCopy;
