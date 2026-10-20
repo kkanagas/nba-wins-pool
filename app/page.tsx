@@ -395,7 +395,7 @@ export default function Dashboard() {
 
   const deduplicatedHistory = Object.values(finalSnapshotsByDate);
 
-  const historyWithRanks = deduplicatedHistory.map((entry) => {
+  const historyWithRanks = deduplicatedHistory.filter((entry) => entry.date >= '2026-10-20').map((entry) => {
     const entryCopy = { ...entry };
     const ownersList = currentRosters.map((r) => r.owner);
     
