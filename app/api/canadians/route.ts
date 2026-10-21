@@ -12,76 +12,85 @@ export async function GET() {
       };
 
       try {
+        // Query gamelog with explicit 2026-27 season parameter (season=2027)
         const res = await fetch(
-          `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/stats`,
+          `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/gamelog?season=2027&seasonType=2`,
           { cache: 'no-store' }
         );
 
         if (!res.ok) return emptyResult;
 
         const data = await res.json();
-        
-        // ESPN stores per-season splits under seasonTypes[].categories[] or directly under categories[]
-        let categories: any[] = [];
-        if (Array.isArray(data?.seasonTypes)) {
-          // Flatten categories from all active season types (Regular Season preferred)
-          for (const st of data.seasonTypes) {
-            if (Array.isArray(st?.categories)) {
-              categories.push(...st.categories);
-            }
-          }
-        }
-        if (categories.length === 0 && Array.isArray(data?.categories)) {
-          categories = data.categories;
-        }
 
+        // 1. Extract 2026-27 Regular Season per-game averages
         let pts = '-';
         let reb = '-';
         let ast = '-';
         let fgPct = '-';
 
-        // Find category containing per-game averages
-        const avgCat = categories.find((c: any) => {
-          const name = (c?.name || c?.displayName || '').toLowerCase();
-          return name.includes('average') || name === 'averages';
-        }) || categories[0];
+        const seasonTypes = data?.seasonTypes || [];
+        const regSeason = seasonTypes.find((st: any) => st?.id === '2' || st?.name?.toLowerCase().includes('regular')) || seasonTypes[0];
+        
+        const avgCategory = regSeason?.categories?.find((c: any) => c?.name === 'averages' || c?.displayName?.toLowerCase().includes('average'));
 
-        if (avgCat && Array.isArray(avgCat.labels)) {
-          const labels = avgCat.labels.map((l: string) => l.toUpperCase());
-          // Stats values can be in avgCat.stats or inside a totals/values array
-          const statsValues = Array.isArray(avgCat.stats) ? avgCat.stats : (avgCat.totals || []);
+        if (avgCategory && Array.isArray(avgCategory.labels) && Array.isArray(avgCategory.stats)) {
+          const labels = avgCategory.labels.map((l: string) => l.toUpperCase());
+          const stats = avgCategory.stats;
 
-          const ptsIdx = labels.indexOf('PTS');
-          const rebIdx = labels.indexOf('REB');
-          const astIdx = labels.indexOf('AST');
+          const pIdx = labels.indexOf('PTS');
+          const rIdx = labels.indexOf('REB');
+          const aIdx = labels.indexOf('AST');
           const fgIdx = labels.indexOf('FG%');
 
-          if (ptsIdx !== -1 && statsValues[ptsIdx] !== undefined) pts = String(statsValues[ptsIdx]);
-          if (rebIdx !== -1 && statsValues[rebIdx] !== undefined) reb = String(statsValues[rebIdx]);
-          if (astIdx !== -1 && statsValues[astIdx] !== undefined) ast = String(statsValues[astIdx]);
-          if (fgIdx !== -1 && statsValues[fgIdx] !== undefined) fgPct = String(statsValues[fgIdx]);
+          if (pIdx !== -1 && stats[pIdx] != null) pts = String(stats[pIdx]);
+          if (rIdx !== -1 && stats[rIdx] != null) reb = String(stats[rIdx]);
+          if (aIdx !== -1 && stats[aIdx] != null) ast = String(stats[aIdx]);
+          if (fgIdx !== -1 && stats[fgIdx] != null) fgPct = String(stats[fgIdx]);
         }
 
-        // Parse last game boxscore summary if present
-        const lastGame = data?.lastGame || {};
-        const lastPts = lastGame?.points ?? '-';
-        const lastReb = lastGame?.rebounds ?? '-';
-        const lastAst = lastGame?.assists ?? '-';
-        const opponent = lastGame?.opponent?.abbreviation || 'N/A';
-        const dateStr = lastGame?.gameDate
-          ? new Date(lastGame.gameDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-          : 'N/A';
+        // 2. Extract Last Game entry from events array
+        let lastGame = { pts: '-', reb: '-', ast: '-', opponent: 'N/A', date: 'N/A' };
+        const events = data?.events || [];
+
+        if (events.length > 0) {
+          const latestEvent = events[0];
+          const statsValues = latestEvent?.stats || latestEvent?.statsValues || [];
+          const labels = latestEvent?.labels || data?.labels || [];
+
+          let lastPts = latestEvent?.points;
+          let lastReb = latestEvent?.rebounds;
+          let lastAst = latestEvent?.assists;
+
+          if (Array.isArray(labels) && Array.isArray(statsValues)) {
+            const labelsUpper = labels.map((l: string) => l.toUpperCase());
+            const pIdx = labelsUpper.indexOf('PTS');
+            const rIdx = labelsUpper.indexOf('REB');
+            const aIdx = labelsUpper.indexOf('AST');
+
+            if (pIdx !== -1 && statsValues[pIdx] != null) lastPts = statsValues[pIdx];
+            if (rIdx !== -1 && statsValues[rIdx] != null) lastReb = statsValues[rIdx];
+            if (aIdx !== -1 && statsValues[aIdx] != null) lastAst = statsValues[aIdx];
+          }
+
+          const oppAbbr = latestEvent?.opponent?.abbreviation || latestEvent?.vsTeamAbbr || 'N/A';
+          const gameDateRaw = latestEvent?.gameDate || latestEvent?.date;
+          const formattedDate = gameDateRaw
+            ? new Date(gameDateRaw).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            : 'N/A';
+
+          lastGame = {
+            pts: lastPts != null ? String(lastPts) : '-',
+            reb: lastReb != null ? String(lastReb) : '-',
+            ast: lastAst != null ? String(lastAst) : '-',
+            opponent: oppAbbr,
+            date: formattedDate,
+          };
+        }
 
         return {
           ...player,
           seasonStats: { pts, reb, ast, fgPct },
-          lastGame: { 
-            pts: String(lastPts), 
-            reb: String(lastReb), 
-            ast: String(lastAst), 
-            opponent, 
-            date: dateStr 
-          },
+          lastGame,
         };
       } catch (err) {
         return emptyResult;
