@@ -26,11 +26,11 @@ export async function GET() {
         let ast = '-';
         let fgPct = '-';
 
-        // 1. Extract Season Averages from seasonTypes
+        // 1. Season Averages
         const seasonTypes = data?.seasonTypes || [];
         const regSeason = seasonTypes.find(
           (st: any) => String(st?.id) === '2' || st?.name?.toLowerCase().includes('regular')
-        );
+        ) || seasonTypes[0];
 
         if (regSeason?.categories && Array.isArray(regSeason.categories)) {
           const avgCat = regSeason.categories.find(
@@ -53,45 +53,57 @@ export async function GET() {
           }
         }
 
-        // 2. Extract Recent Game Box Score safely
+        // 2. Recent Game Box Score
         let lastGame = { pts: '-', reb: '-', ast: '-', opponent: 'N/A', date: 'N/A' };
-        const rawEvents = data?.events || [];
+        
+        // Retrieve events array from top level or inside seasonTypes
+        const rawEvents = data?.events || regSeason?.events || [];
 
-        // Check if rawEvents actually contains game logs (has gameDate/opponent)
-        const gameEvents = rawEvents.filter((e: any) => e?.gameDate || e?.opponent || e?.vsTeamAbbr);
+        if (Array.isArray(rawEvents) && rawEvents.length > 0) {
+          // Find first entry that represents a game box score
+          const latest = rawEvents[0];
 
-        if (gameEvents.length > 0) {
-          const latest = gameEvents[0];
-          const labels = (latest?.labels || data?.labels || []).map((l: string) => String(l).toUpperCase());
-          const statsValues = latest?.stats || latest?.statsValues || [];
+          // Check direct keys first (e.g. points, rebounds, assists)
+          let lastPts = latest?.points ?? latest?.pts;
+          let lastReb = latest?.rebounds ?? latest?.reb;
+          let lastAst = latest?.assists ?? latest?.ast;
 
-          let lastPts = latest?.points;
-          let lastReb = latest?.rebounds;
-          let lastAst = latest?.assists;
+          // If null, check positional mapping against labels
+          if (lastPts == null || lastReb == null || lastAst == null) {
+            const labels = (latest?.labels || data?.labels || []).map((l: string) => String(l).toUpperCase());
+            const statsValues = latest?.stats || latest?.statsValues || [];
 
-          if (Array.isArray(labels) && Array.isArray(statsValues) && statsValues.length > 0) {
-            const pIdx = labels.indexOf('PTS');
-            const rIdx = labels.indexOf('REB');
-            const aIdx = labels.indexOf('AST');
+            if (Array.isArray(labels) && Array.isArray(statsValues)) {
+              const pIdx = labels.indexOf('PTS');
+              const rIdx = labels.indexOf('REB');
+              const aIdx = labels.indexOf('AST');
 
-            if (pIdx !== -1 && statsValues[pIdx] != null) lastPts = statsValues[pIdx];
-            if (rIdx !== -1 && statsValues[rIdx] != null) lastReb = statsValues[rIdx];
-            if (aIdx !== -1 && statsValues[aIdx] != null) lastAst = statsValues[aIdx];
+              if (pIdx !== -1 && statsValues[pIdx] != null) lastPts = statsValues[pIdx];
+              if (rIdx !== -1 && statsValues[rIdx] != null) lastReb = statsValues[rIdx];
+              if (aIdx !== -1 && statsValues[aIdx] != null) lastAst = statsValues[aIdx];
+            }
           }
 
-          const oppAbbr = latest?.opponent?.abbreviation || latest?.vsTeamAbbr || 'N/A';
+          const oppAbbr = latest?.opponent?.abbreviation || latest?.opponent?.displayName || latest?.vsTeamAbbr || 'N/A';
           const gameDateRaw = latest?.gameDate || latest?.date;
           const formattedDate = gameDateRaw
             ? new Date(gameDateRaw).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
             : 'N/A';
 
-          lastGame = {
-            pts: lastPts != null ? String(lastPts) : '-',
-            reb: lastReb != null ? String(lastReb) : '-',
-            ast: lastAst != null ? String(lastAst) : '-',
-            opponent: oppAbbr,
-            date: formattedDate,
-          };
+          if (lastPts != null || lastReb != null || lastAst != null) {
+            lastGame = {
+              pts: lastPts != null ? String(lastPts) : '-',
+              reb: lastReb != null ? String(lastReb) : '-',
+              ast: lastAst != null ? String(lastAst) : '-',
+              opponent: oppAbbr,
+              date: formattedDate,
+            };
+          }
+        }
+
+        // Log SGA's output to Vercel logs for direct inspection
+        if (player.id === 4278077) {
+          console.log('SGA Processed Output:', { pts, reb, ast, fgPct, lastGame });
         }
 
         return {
