@@ -8,7 +8,7 @@ export async function GET() {
       try {
         const res = await fetch(
           `https://cdn.nba.com/static/json/liveData/playerprofile/playerprofile_${player.id}.json`,
-          { next: { revalidate: 3600 } } // Cache for 1 hour
+          { cache: 'no-store' } // Bypasses cache to ensure fresh data on refresh
         );
 
         if (!res.ok) {
@@ -36,7 +36,6 @@ export async function GET() {
           },
         };
       } catch (err) {
-        // Fallback for players without data yet or network drops
         return {
           ...player,
           seasonStats: { pts: '-', reb: '-', ast: '-', fgPct: '-' },

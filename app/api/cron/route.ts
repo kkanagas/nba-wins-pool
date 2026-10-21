@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-// Import your database client here (e.g., Supabase, Prisma, or Vercel Postgres)
-// import { db } from '@/lib/db'; 
+import { kv } from '@vercel/kv';
 
 export async function GET(request: Request) {
-  // Optional but recommended: Secure your cron route using Vercel's cron secret
   const authHeader = request.headers.get('authorization');
   if (
     process.env.CRON_SECRET &&
@@ -13,7 +11,6 @@ export async function GET(request: Request) {
   }
 
   try {
-    // 1. Fetch current scores from ESPN (same logic as fetch-scores)
     const response = await fetch(
       'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard',
       { cache: 'no-store' }
@@ -52,21 +49,16 @@ export async function GET(request: Request) {
 
     const todayDate = new Date().toISOString().split('T')[0]; // e.g., "2026-10-21"
 
-    // 2. SAVE HISTORICAL SNAPSHOT TO DATABASE
-    // TODO: Add your database insert query here for the daily graph progression.
-    // Example (Supabase):
-    // await db.from('historical_snapshots').upsert({
-    //   date: todayDate,
-    //   wins_data: teamWins,
-    // });
-
-    // 3. UPDATE CANADIANS TAB DATA (if stored in DB)
-    // TODO: Add any logic needed to refresh or update Canadians tab records.
+    // 1. SAVE HISTORICAL SNAPSHOT TO VERCEL KV
+    // Store each day's wins record in a hash or list
+    await kv.hset('nba_wins_history', {
+      [todayDate]: JSON.stringify(teamWins),
+    });
 
     return NextResponse.json({
       success: true,
       date: todayDate,
-      message: 'Daily snapshot and Canadians tab data updated successfully!',
+      message: 'Daily snapshot updated successfully in Vercel KV!',
       wins: teamWins,
     });
   } catch (error: any) {
