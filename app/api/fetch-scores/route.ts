@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   try {
     const response = await fetch(
-      'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard',
+      'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings',
       { cache: 'no-store' }
     );
 
@@ -16,36 +16,28 @@ export async function GET() {
     const teamWins: Record<string, number> = {};
     const teamLosses: Record<string, number> = {};
 
-    if (data?.events) {
-      data.events.forEach((event: any) => {
-        const competition = event?.competitions?.[0];
-        const competitors = competition?.competitors || [];
-        const isCompleted = competition?.status?.type?.completed;
+    const children = data?.children || [];
+    children.forEach((conference: any) => {
+      const entries = conference?.standings?.entries || [];
+      entries.forEach((entry: any) => {
+        const teamName = entry?.team?.name;         // e.g. "Celtics"
+        const location = entry?.team?.location;     // e.g. "Boston"
+        const displayName = entry?.team?.displayName; // e.g. "Boston Celtics"
+        const abbrev = entry?.team?.abbreviation;   // e.g. "BOS"
 
-        if (isCompleted) {
-          competitors.forEach((competitor: any) => {
-            const teamName = competitor?.team?.name; // e.g., "Pistons"
-            const location = competitor?.team?.location; // e.g., "Detroit"
-            const displayName = competitor?.team?.displayName; // e.g., "Detroit Pistons"
-            const winner = competitor?.winner; // boolean
+        const stats = entry?.stats || [];
+        const wins = stats.find((s: any) => s.name === 'wins')?.value ?? 0;
+        const losses = stats.find((s: any) => s.name === 'losses')?.value ?? 0;
 
-            // Register wins/losses under all possible name variations to match page.tsx maps
-            [teamName, location, displayName].forEach((name) => {
-              if (name) {
-                if (teamWins[name] === undefined) teamWins[name] = 0;
-                if (teamLosses[name] === undefined) teamLosses[name] = 0;
-
-                if (winner === true) {
-                  teamWins[name] += 1;
-                } else if (winner === false) {
-                  teamLosses[name] += 1;
-                }
-              }
-            });
-          });
-        }
+        // Map all potential naming keys used in your rosters and aliases
+        [teamName, location, displayName, abbrev].forEach((name) => {
+          if (name) {
+            teamWins[name] = wins;
+            teamLosses[name] = losses;
+          }
+        });
       });
-    }
+    });
 
     return NextResponse.json({
       success: true,
