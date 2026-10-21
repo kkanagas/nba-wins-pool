@@ -2,9 +2,6 @@
 import { NextResponse } from 'next/server';
 import { CANADIAN_PLAYERS } from '@/data/canadian-players';
 
-// Force dynamic execution so Next.js never caches an empty static response
-export const dynamic = 'force-dynamic';
-
 export async function GET() {
   const apiKey = process.env.BALLDONTLIE_API_KEY;
 
@@ -27,7 +24,7 @@ export async function GET() {
       };
 
       try {
-        // 1. Fetch 2026-27 Season Averages
+        // 1. Fetch Season Averages
         const seasonAvgRes = await fetch(
           `https://api.balldontlie.io/v1/season_averages?season=2026&player_ids[]=${player.id}`,
           { headers, cache: 'no-store' }
@@ -61,13 +58,11 @@ export async function GET() {
           if (Array.isArray(statsData.data) && statsData.data.length > 0) {
             const latest = statsData.data[0];
 
-            // Determine opponent team abbreviation
             const opponent =
               latest.game?.home_team_id === latest.team?.id
                 ? latest.game?.visitor_team_abbr || 'N/A'
                 : latest.game?.home_team_abbr || 'N/A';
 
-            // Format game date
             const formattedDate = latest.game?.date
               ? new Date(latest.game.date).toLocaleDateString('en-US', {
                   month: 'short',
@@ -86,7 +81,6 @@ export async function GET() {
           }
         }
 
-        // Fallback: If season averages are not yet calculated, sync from last game
         if (seasonStats.pts === '-' && lastGame.pts !== '-') {
           seasonStats = {
             pts: lastGame.pts,
