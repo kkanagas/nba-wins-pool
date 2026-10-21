@@ -12,9 +12,9 @@ export async function GET() {
       };
 
       try {
-        // Explicitly request season 2027 (2026-27 season) from ESPN's stats endpoint
+        // Fetch athlete stats without strict season query param to ensure current active data is returned
         const res = await fetch(
-          `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/stats?season=2027`,
+          `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/stats`,
           { cache: 'no-store' }
         );
 
@@ -22,9 +22,9 @@ export async function GET() {
 
         const data = await res.json();
         
-        // Find the regular season split for 2027
+        // Flexible split selection: grab the regular season split or default to the latest/first available
         const splits = data?.splits || data?.statistics?.splits || [];
-        const regularSplit = splits.find((s: any) => s.season?.year === 2027 && (s.type === 'regular' || s.name?.includes('Regular'))) || splits[0];
+        const regularSplit = splits.find((s: any) => s.type === 'regular' || s.name?.includes('Regular')) || splits[0] || {};
         const categories = regularSplit?.categories || data?.categories || [];
 
         let ppg = '-';
@@ -47,7 +47,7 @@ export async function GET() {
           });
         });
 
-        // Parse last game info if available in overview/stats response
+        // Parse last game info if available
         const lastGame = data?.lastGame || {};
         const lastPts = lastGame?.points ?? '-';
         const lastReb = lastGame?.rebounds ?? '-';
