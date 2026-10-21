@@ -19,8 +19,9 @@ export async function GET(request: Request) {
   }
 
   try {
+    // Fetch NBA Standings from ESPN to get accurate cumulative wins/losses
     const response = await fetch(
-      'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard',
+      'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings',
       { cache: 'no-store' }
     );
 
@@ -32,30 +33,24 @@ export async function GET(request: Request) {
     const teamWins: Record<string, number> = {};
     const teamLosses: Record<string, number> = {};
 
-    if (data?.events) {
-      data.events.forEach((event: any) => {
-        const competition = event?.competitions?.[0];
-        const competitors = competition?.competitors || [];
-        const isCompleted = competition?.status?.type?.completed;
+    // Parse cumulative standings from ESPN
+    if (data?.children) {
+      data.children.forEach((conference: any) => {
+        const standingsEntries = conference?.standings?.entries || [];
+        standingsEntries.forEach((entry: any) => {
+          const teamName = entry?.team?.name;
+          const stats = entry?.stats || [];
+          const winsStat = stats.find((s: any) => s.name === 'wins' || s.type === 'wins');
+          const lossesStat = stats.find((s: any) => s.name === 'losses' || s.type === 'losses');
 
-        if (isCompleted) {
-          competitors.forEach((competitor: any) => {
-            const teamName = competitor?.team?.name;
-            const winner = competitor?.winner;
-
-            if (teamName) {
-              if (teamWins[teamName] === undefined) teamWins[teamName] = 0;
-              if (teamLosses[teamName] === undefined) teamLosses[teamName] = 0;
-
-              if (winner === true) teamWins[teamName] += 1;
-              else if (winner === false) teamLosses[teamName] += 1;
-            }
-          });
-        }
+          if (teamName) {
+            teamWins[teamName] = winsStat?.value ?? 0;
+            teamLosses[teamName] = lossesStat?.value ?? 0;
+          }
+        });
       });
     }
 
-    // Format date as "Oct 21" to maintain compatibility with frontend logic
     const todayDateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
 
     const snapshot: Record<string, any> = { date: todayDateStr };
