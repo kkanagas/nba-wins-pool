@@ -2,7 +2,23 @@
 import { NextResponse } from 'next/server';
 import { CANADIAN_PLAYERS } from '@/data/canadian-players';
 
+// Force dynamic execution so Next.js never caches an empty static response
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET() {
+  const apiKey = process.env.BALLDONTLIE_API_KEY;
+
+  if (!apiKey) {
+    console.error('Missing BALLDONTLIE_API_KEY environment variable');
+    return NextResponse.json(
+      { error: 'BALLDONTLIE_API_KEY environment variable is not configured' },
+      { status: 500 }
+    );
+  }
+
+  const headers = { Authorization: apiKey };
+
   try {
     const playerStatsPromises = CANADIAN_PLAYERS.map(async (player) => {
       const emptyResult = {
@@ -12,116 +28,82 @@ export async function GET() {
       };
 
       try {
-        const res = await fetch(
-          `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/gamelog?season=2027`,
-          { cache: 'no-store' }
+        // 1. Fetch 2026-27 Season Averages
+        const seasonAvgRes = await fetch(
+          `https://api.balldontlie.io/v1/season_averages?season=2026&player_ids[]=${player.id}`,
+          { headers, cache: 'no-store' }
         );
 
-        if (!res.ok) return emptyResult;
+        let seasonStats = { pts: '-', reb: '-', ast: '-', fgPct: '-' };
 
-        const data = await res.json();
-
-        let pts = '-';
-        let reb = '-';
-        let ast = '-';
-        let fgPct = '-';
-
-        // 1. Season Averages
-        const seasonTypes = data?.seasonTypes || [];
-        const regSeason = seasonTypes.find(
-          (st: any) => String(st?.id) === '2' || st?.name?.toLowerCase().includes('regular')
-        ) || seasonTypes[0];
-
-        const categories = regSeason?.categories || data?.categories || [];
-
-        if (Array.isArray(categories) && categories.length > 0) {
-          const statCat =
-            categories.find((c: any) => c?.name === 'averages' || c?.displayName?.toLowerCase().includes('average')) ||
-            categories.find((c: any) => c?.name === 'totals' || c?.displayName?.toLowerCase().includes('total')) ||
-            categories[0];
-
-          if (statCat && Array.isArray(statCat.labels) && Array.isArray(statCat.stats)) {
-            const labels = statCat.labels.map((l: string) => String(l).toUpperCase());
-            const stats = statCat.stats;
-
-            const pIdx = labels.indexOf('PTS');
-            const rIdx = labels.indexOf('REB');
-            const aIdx = labels.indexOf('AST');
-            const fgIdx = labels.indexOf('FG%');
-
-            if (pIdx !== -1 && stats[pIdx] != null) pts = String(stats[pIdx]);
-            if (rIdx !== -1 && stats[rIdx] != null) reb = String(stats[rIdx]);
-            if (aIdx !== -1 && stats[aIdx] != null) ast = String(stats[aIdx]);
-            if (fgIdx !== -1 && stats[fgIdx] != null) fgPct = String(stats[fgIdx]);
+        if (seasonAvgRes.ok) {
+          const avgData = await seasonAvgRes.json();
+          if (Array.isArray(avgData.data) && avgData.data.length > 0) {
+            const avg = avgData.data[0];
+            seasonStats = {
+              pts: avg.pts != null ? Number(avg.pts).toFixed(1) : '-',
+              reb: avg.reb != null ? Number(avg.reb).toFixed(1) : '-',
+              ast: avg.ast != null ? Number(avg.ast).toFixed(1) : '-',
+              fgPct: avg.fg_pct != null ? `${(avg.fg_pct * 100).toFixed(1)}%` : '-',
+            };
           }
         }
 
-        // 2. Recent Game Box Score
+        // 2. Fetch Most Recent Game Box Score
+        const statsRes = await fetch(
+          `https://api.balldontlie.io/v1/stats?player_ids[]=${player.id}&seasons[]=2026&per_page=1`,
+          { headers, cache: 'no-store' }
+        );
+
         let lastGame = { pts: '-', reb: '-', ast: '-', opponent: 'N/A', date: 'N/A' };
-        const rawEvents = data?.events || regSeason?.events || [];
 
-        if (Array.isArray(rawEvents) && rawEvents.length > 0) {
-          const latest = rawEvents[0];
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          if (Array.isArray(statsData.data) && statsData.data.length > 0) {
+            const latest = statsData.data[0];
 
-          // Detailed log for Shai to inspect exact keys
-          if (player.id === 4278077) {
-            console.log('SGA Event[0] Raw Keys:', Object.keys(latest));
-            console.log('SGA Event[0] Full Data:', JSON.stringify(latest));
+            // Determine opponent team abbreviation
+            const opponent =
+              latest.game?.home_team_id === latest.team?.id
+                ? latest.game?.visitor_team_abbr || 'N/A'
+                : latest.game?.home_team_abbr || 'N/A';
+
+            // Format game date
+            const formattedDate = latest.game?.date
+              ? new Date(latest.game.date).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  timeZone: 'UTC',
+                })
+              : 'N/A';
+
+            lastGame = {
+              pts: latest.pts != null ? String(latest.pts) : '-',
+              reb: latest.reb != null ? String(latest.reb) : '-',
+              ast: latest.ast != null ? String(latest.ast) : '-',
+              opponent,
+              date: formattedDate,
+            };
           }
-
-          // Search direct key variations
-          let lastPts = latest?.points ?? latest?.pts ?? latest?.stats?.points;
-          let lastReb = latest?.rebounds ?? latest?.reb ?? latest?.stats?.rebounds;
-          let lastAst = latest?.assists ?? latest?.ast ?? latest?.stats?.assists;
-
-          // Search labels/stats array if direct keys were missing
-          const labels = (latest?.labels || data?.labels || regSeason?.labels || []).map((l: string) =>
-            String(l).toUpperCase()
-          );
-          const statsValues = latest?.stats || latest?.statsValues || [];
-
-          if ((lastPts == null || lastReb == null || lastAst == null) && Array.isArray(labels) && Array.isArray(statsValues)) {
-            const pIdx = labels.indexOf('PTS');
-            const rIdx = labels.indexOf('REB');
-            const aIdx = labels.indexOf('AST');
-
-            if (lastPts == null && pIdx !== -1 && statsValues[pIdx] != null) lastPts = statsValues[pIdx];
-            if (lastReb == null && rIdx !== -1 && statsValues[rIdx] != null) lastReb = statsValues[rIdx];
-            if (lastAst == null && aIdx !== -1 && statsValues[aIdx] != null) lastAst = statsValues[aIdx];
-          }
-
-          const oppAbbr =
-            latest?.opponent?.abbreviation ||
-            latest?.opponent?.displayName ||
-            latest?.vsTeamAbbr ||
-            'N/A';
-          const gameDateRaw = latest?.gameDate || latest?.date;
-          const formattedDate = gameDateRaw
-            ? new Date(gameDateRaw).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-            : 'N/A';
-
-          lastGame = {
-            pts: lastPts != null ? String(lastPts) : '-',
-            reb: lastReb != null ? String(lastReb) : '-',
-            ast: lastAst != null ? String(lastAst) : '-',
-            opponent: oppAbbr,
-            date: formattedDate,
-          };
         }
 
-        // Season stats fallback sync
-        if (pts === '-' && lastGame.pts !== '-') {
-          pts = lastGame.pts;
-          reb = lastGame.reb;
-          ast = lastGame.ast;
+        // Fallback: If season averages are not yet calculated (e.g., played only 1 game), sync from last game
+        if (seasonStats.pts === '-' && lastGame.pts !== '-') {
+          seasonStats = {
+            pts: lastGame.pts,
+            reb: lastGame.reb,
+            ast: lastGame.ast,
+            fgPct: '-',
+          };
         }
 
         return {
           ...player,
-          seasonStats: { pts, reb, ast, fgPct },
+          seasonStats,
           lastGame,
         };
       } catch (err) {
+        console.error(`Error fetching stats for player ID ${player.id}:`, err);
         return emptyResult;
       }
     });
@@ -130,6 +112,9 @@ export async function GET() {
     return NextResponse.json(results);
   } catch (error) {
     console.error('Fatal error in Canadians route:', error);
-    return NextResponse.json({ error: 'Failed to fetch Canadian player stats' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch Canadian player stats from balldontlie' },
+      { status: 500 }
+    );
   }
 }
