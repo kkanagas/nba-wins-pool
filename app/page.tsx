@@ -397,7 +397,23 @@ export default function Dashboard() {
 
   const deduplicatedHistory = Object.values(finalSnapshotsByDate);
 
-  const historyWithRanks = deduplicatedHistory.filter((entry) => entry.date >= '2026-10-20').map((entry) => {
+  // Strictly filter out any dates prior to October 20, 2026
+  const historyWithRanks = deduplicatedHistory.filter((entry) => {
+    if (!entry || !entry.date) return false;
+    
+    // Explicitly reject pre-season and pre-Oct 20 dates
+    const preSeasonDates = [
+      'Oct 1', 'Oct 2', 'Oct 3', 'Oct 4', 'Oct 5', 'Oct 6', 'Oct 7', 'Oct 8', 'Oct 9', 
+      'Oct 10', 'Oct 11', 'Oct 12', 'Oct 13', 'Oct 14', 'Oct 15', 'Oct 16', 'Oct 17', 'Oct 18', 'Oct 19', 
+      'Sep 30', 'Sep 29', 'Sep 28', 'Sep 27', 'Sep 26', 'Sep 25', 'Sep 24', 'Sep 23', 'Sep 22', 'Sep 21', 'Sep 20'
+    ];
+    if (preSeasonDates.includes(entry.date)) return false;
+
+    // Reject ISO dates prior to 2026-10-20
+    if (entry.date.includes('-') && entry.date < '2026-10-20') return false;
+
+    return true;
+  }).map((entry) => {
     const entryCopy = { ...entry };
     const ownersList = currentRosters.map((r) => r.owner);
     
