@@ -1,3 +1,4 @@
+// app/api/fetch-scores/route.ts
 import { NextResponse } from 'next/server';
 
 export async function GET() {
@@ -21,23 +22,26 @@ export async function GET() {
         const competitors = competition?.competitors || [];
         const isCompleted = competition?.status?.type?.completed;
 
-        // Only process games that have actually gone final
         if (isCompleted) {
           competitors.forEach((competitor: any) => {
-            const teamName = competitor?.team?.name; // e.g., "Pistons", "Celtics"
-            const winner = competitor?.winner; // boolean true/false
+            const teamName = competitor?.team?.name; // e.g., "Pistons"
+            const location = competitor?.team?.location; // e.g., "Detroit"
+            const displayName = competitor?.team?.displayName; // e.g., "Detroit Pistons"
+            const winner = competitor?.winner; // boolean
 
-            if (teamName) {
-              // Initialize if not present
-              if (teamWins[teamName] === undefined) teamWins[teamName] = 0;
-              if (teamLosses[teamName] === undefined) teamLosses[teamName] = 0;
+            // Register wins/losses under all possible name variations to match page.tsx maps
+            [teamName, location, displayName].forEach((name) => {
+              if (name) {
+                if (teamWins[name] === undefined) teamWins[name] = 0;
+                if (teamLosses[name] === undefined) teamLosses[name] = 0;
 
-              if (winner === true) {
-                teamWins[teamName] += 1;
-              } else if (winner === false) {
-                teamLosses[teamName] += 1;
+                if (winner === true) {
+                  teamWins[name] += 1;
+                } else if (winner === false) {
+                  teamLosses[name] += 1;
+                }
               }
-            }
+            });
           });
         }
       });
@@ -46,7 +50,6 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
-      source: 'espn-live-status-parser',
       wins: teamWins,
       losses: teamLosses,
     });
