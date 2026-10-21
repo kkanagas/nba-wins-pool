@@ -54,7 +54,6 @@ const getTeamStat = (teamName: string, statObj: Record<string, number>): number 
 
 export async function GET(request: Request) {
   try {
-    // Fetch official NBA standings
     const response = await fetch(
       'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings',
       { cache: 'no-store' }
@@ -90,7 +89,6 @@ export async function GET(request: Request) {
       });
     });
 
-    // Guard: Don't record a snapshot if wins data is empty
     if (Object.keys(teamWins).length === 0) {
       return NextResponse.json({ success: false, error: 'Empty wins data from ESPN standings' }, { status: 500 });
     }
@@ -105,13 +103,28 @@ export async function GET(request: Request) {
       snapshot[`${roster.owner}_losses`] = ownerLosses;
     });
 
-    // Save snapshot to Vercel KV history
-    await kv.hset('nba_wins_history', { [todayStr]: snapshot });
+    // Fetch existing history array from nba_league_history
+    let history: any = await kv.get('nba_league_history');
+    if (!Array.isArray(history)) {
+      history = [];
+    }
+
+    // Replace or push today's snapshot
+    const existingIndex = history.findIndex((entry: any) => entry && entry.date === todayStr);
+    if (existingIndex >= 0) {
+      history[existingIndex] = snapshot;
+    } else {
+      history.push(snapshot);
+    }
+
+    // Save back to nba_league_history as a JSON array
+    await kv.set('nba_league_history', history);
 
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
       snapshot,
+      history,
     });
   } catch (error: any) {
     return NextResponse.json(
