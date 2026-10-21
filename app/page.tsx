@@ -307,6 +307,8 @@ export default function Dashboard() {
         setLiveLosses(data.losses || {});
         setLastUpdated(new Date().toLocaleTimeString());
         
+        // Record daily snapshot upon successful live score fetch
+        await recordDailySnapshot(data.wins, data.losses || {});
       }
     } catch (err) {
       console.error('Failed to fetch live scores', err);

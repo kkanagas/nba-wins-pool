@@ -2,9 +2,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown, RefreshCw } from 'lucide-react';
 
-// Reusing your exact dashboard team color mapping
 const TEAM_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   Hawks: { bg: 'bg-red-950/80', text: 'text-red-300', border: 'border-red-700/50' },
   Atlanta: { bg: 'bg-red-950/80', text: 'text-red-300', border: 'border-red-700/50' },
@@ -89,16 +88,25 @@ export default function CanadiansTab() {
   const [players, setPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortField, setSortField] = useState<SortField>('pts');
-  const [sortAsc, setSortAsc] = useState(false); // Default to highest points first
+  const [sortAsc, setSortAsc] = useState(false);
+
+  const fetchCanadians = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/canadians');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setPlayers(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch Canadian player stats', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetch('/api/canadians')
-      .then((res) => res.json())
-      .then((data) => {
-        setPlayers(data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    fetchCanadians();
   }, []);
 
   const handleSort = (field: SortField) => {
@@ -145,17 +153,23 @@ export default function CanadiansTab() {
     return 0;
   });
 
-  if (loading) {
-    return <div className="p-8 text-center text-gray-400">Loading Canadian NBA stats... 🇨🇦</div>;
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
           🇨🇦 Canadians in the NBA
         </h2>
-        <span className="text-sm text-gray-400">{players.length} Active Players</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-400">{players.length} Active Players</span>
+          <button
+            onClick={fetchCanadians}
+            disabled={loading}
+            className="flex items-center gap-2 bg-slate-800 border border-slate-700 hover:border-slate-600 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-200 transition-all cursor-pointer"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 text-red-400 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Updating...' : 'Refresh Stats'}
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-slate-800 bg-slate-900/50">
@@ -190,32 +204,46 @@ export default function CanadiansTab() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
-            {sortedPlayers.map((p) => {
-              const teamStyle = TEAM_COLORS[p.team] || { bg: 'bg-slate-800', text: 'text-slate-200', border: 'border-slate-700' };
-              return (
-                <tr key={p.id} className="hover:bg-slate-800/30 transition-colors">
-                  <td className="px-4 py-3 font-semibold text-white">{p.name}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-md border font-mono text-xs font-medium ${teamStyle.bg} ${teamStyle.text} ${teamStyle.border}`}>
-                      {p.team}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{p.hometown}</td>
-                  <td className="px-4 py-3 text-center font-semibold text-amber-300 border-l border-slate-800 font-mono">
-                    {p.seasonStats?.pts}
-                  </td>
-                  <td className="px-4 py-3 text-center font-mono">{p.seasonStats?.reb}</td>
-                  <td className="px-4 py-3 text-center font-mono">{p.seasonStats?.ast}</td>
-                  <td className="px-4 py-3 text-center font-mono text-gray-300">{p.seasonStats?.fgPct}</td>
-                  <td className="px-4 py-3 text-center border-l border-slate-800 text-xs text-gray-400 bg-slate-900/30">
-                    vs {p.lastGame?.opponent} ({p.lastGame?.date})
-                  </td>
-                  <td className="px-4 py-3 text-center font-mono font-medium text-emerald-400 bg-slate-900/30">
-                    {p.lastGame?.pts} / {p.lastGame?.reb} / {p.lastGame?.ast}
-                  </td>
-                </tr>
-              );
-            })}
+            {loading && players.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="py-8 text-center text-gray-400">
+                  Loading Canadian NBA stats... 🇨🇦
+                </td>
+              </tr>
+            ) : sortedPlayers.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="py-8 text-center text-gray-400">
+                  No player data available.
+                </td>
+              </tr>
+            ) : (
+              sortedPlayers.map((p) => {
+                const teamStyle = TEAM_COLORS[p.team] || { bg: 'bg-slate-800', text: 'text-slate-200', border: 'border-slate-700' };
+                return (
+                  <tr key={p.id} className="hover:bg-slate-800/30 transition-colors">
+                    <td className="px-4 py-3 font-semibold text-white">{p.name}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-md border font-mono text-xs font-medium ${teamStyle.bg} ${teamStyle.text} ${teamStyle.border}`}>
+                        {p.team}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-400 text-xs">{p.hometown}</td>
+                    <td className="px-4 py-3 text-center font-semibold text-amber-300 border-l border-slate-800 font-mono">
+                      {p.seasonStats?.pts}
+                    </td>
+                    <td className="px-4 py-3 text-center font-mono">{p.seasonStats?.reb}</td>
+                    <td className="px-4 py-3 text-center font-mono">{p.seasonStats?.ast}</td>
+                    <td className="px-4 py-3 text-center font-mono text-gray-300">{p.seasonStats?.fgPct}</td>
+                    <td className="px-4 py-3 text-center border-l border-slate-800 text-xs text-gray-400 bg-slate-900/30">
+                      vs {p.lastGame?.opponent} ({p.lastGame?.date})
+                    </td>
+                    <td className="px-4 py-3 text-center font-mono font-medium text-emerald-400 bg-slate-900/30">
+                      {p.lastGame?.pts} / {p.lastGame?.reb} / {p.lastGame?.ast}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
