@@ -3,25 +3,19 @@ import { kv } from '@vercel/kv';
 
 export async function GET() {
   try {
-    const hashData = await kv.hgetall('nba_wins_history');
+    // Fetch directly from the key holding your real data
+    const history = await kv.get('nba_league_history');
 
-    if (!hashData || typeof hashData !== 'object') {
+    if (!history) {
       return NextResponse.json([]);
     }
 
-    const historyArray = Object.entries(hashData).map(([date, val]) => {
-      const snapshot = typeof val === 'string' ? JSON.parse(val) : val;
-      return {
-        date,
-        ...(typeof snapshot === 'object' && snapshot !== null ? snapshot : {}),
-      };
-    });
+    // Handle if it's stored as a JSON string or parsed array
+    const data = typeof history === 'string' ? JSON.parse(history) : history;
 
-    historyArray.sort((a, b) => a.date.localeCompare(b.date));
-
-    return NextResponse.json(historyArray);
+    return NextResponse.json(Array.isArray(data) ? data : []);
   } catch (error) {
-    console.error('Failed to fetch history hash', error);
+    console.error('Failed to fetch history', error);
     return NextResponse.json([], { status: 500 });
   }
 }

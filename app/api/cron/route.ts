@@ -65,9 +65,23 @@ export async function GET(request: Request) {
       snapshot[`${roster.owner}_losses`] = losses;
     });
 
-    await kv.hset('nba_wins_history', {
-      [todayDateStr]: JSON.stringify(snapshot),
-    });
+    // Read current array from nba_league_history
+    const rawHistory = await kv.get('nba_league_history');
+    let historyArray: any[] = [];
+    if (rawHistory) {
+      historyArray = typeof rawHistory === 'string' ? JSON.parse(rawHistory) : rawHistory;
+    }
+
+    // Update or append today's entry
+    const existingIndex = historyArray.findIndex((item: any) => item.date === todayDateStr);
+    if (existingIndex >= 0) {
+      historyArray[existingIndex] = snapshot;
+    } else {
+      historyArray.push(snapshot);
+    }
+
+    // Save back to nba_league_history
+    await kv.set('nba_league_history', JSON.stringify(historyArray));
 
     return NextResponse.json({
       success: true,
