@@ -12,9 +12,9 @@ export async function GET() {
       };
 
       try {
-        // Fetch from ESPN's public athlete endpoint
+        // Fetch from ESPN's core stats endpoint for the athlete
         const res = await fetch(
-          `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/overview`,
+          `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/stats`,
           { cache: 'no-store' }
         );
 
@@ -22,49 +22,52 @@ export async function GET() {
 
         const data = await res.json();
         
-        // Parse statistics dynamically from the overview payload
-        const statistics = data?.statistics || data?.seasonStatistics || {};
-        const splits = statistics?.splits || data?.splits || [];
+        // Safely traverse categories / splits
+        const categories = data?.categories || data?.splits?.[0]?.categories || [];
         
-        // Find regular season split or default to the first available split
-        const currentSplit = splits.find((s: any) => s.type === 'regular' || s.name?.includes('Regular')) || splits[0] || {};
-        const statsList = currentSplit?.stats || currentSplit?.categories || [];
-
         let pts = '-';
         let reb = '-';
         let ast = '-';
         let fgPct = '-';
 
-        // Helper to map stats dynamically
-        const extractStats = (statObj: any) => {
-          const name = (statObj?.name || statObj?.abbreviation || '').toLowerCase();
-          const val = statObj?.displayValue || statObj?.value;
-          if (val !== undefined) {
-            if (name === 'pts' || name === 'points' || name === 'pointspergame') pts = String(val);
-            if (name === 'reb' || name === 'rebounds' || name === 'reboundspergame') reb = String(val);
-            if (name === 'ast' || name === 'assists' || name === 'assistspergame') ast = String(val);
-            if (name === 'fgpct' || name === 'fieldgoalpercentage') fgPct = String(val);
-          }
-        };
-
-        if (Array.isArray(statsList)) {
-          statsList.forEach((item: any) => {
-            if (item?.stats) {
-              item.stats.forEach(extractStats);
-            } else {
-              extractStats(item);
+        categories.forEach((cat: any) => {
+          const stats = cat?.stats || [];
+          stats.forEach((stat: any) => {
+            const name = (stat?.name || stat?.abbreviation || '').toLowerCase();
+            const val = stat?.displayValue || stat?.value;
+            
+            if (val !== undefined && val !== null) {
+              if (name === 'pts' || name === 'points' || name === 'pointspergame') pts = String(val);
+              if (name === 'reb' || name === 'rebounds' || name === 'reboundspergame') reb = String(val);
+              if (name === 'ast' || name === 'assists' || name === 'assistspergame') ast = String(val);
+              if (name === 'fgpct' || name === 'fieldgoalpercentage') fgPct = String(val);
             }
+          });
+        });
+
+        // Also check statistics summary array if present
+        if (data?.statistics) {
+          data.statistics.forEach((statGroup: any) => {
+            statGroup?.stats?.forEach((s: any) => {
+              const name = (s?.name || s?.abbreviation || '').toLowerCase();
+              const val = s?.displayValue || s?.value;
+              if (val !== undefined) {
+                if (name === 'pts' || name === 'points') pts = String(val);
+                if (name === 'reb' || name === 'rebounds') reb = String(val);
+                if (name === 'ast' || name === 'assists') ast = String(val);
+                if (name === 'fgpct' || name === 'fieldgoalpercentage') fgPct = String(val);
+              }
+            });
           });
         }
 
-        // Parse last game info if present in overview
-        const lastGameData = data?.lastGame || data?.events?.[0] || {};
-        const lastPts = lastGameData?.points ?? lastGameData?.statValue ?? '-';
-        const lastReb = lastGameData?.rebounds ?? '-';
-        const lastAst = lastGameData?.assists ?? '-';
-        const opponent = lastGameData?.opponent?.abbreviation || lastGameData?.vsTeamAbbr || 'N/A';
-        const dateStr = lastGameData?.gameDate
-          ? new Date(lastGameData.gameDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        const lastGame = data?.lastGame || {};
+        const lastPts = lastGame?.points ?? '-';
+        const lastReb = lastGame?.rebounds ?? '-';
+        const lastAst = lastGame?.assists ?? '-';
+        const opponent = lastGame?.opponent?.abbreviation || lastGame?.vsTeamAbbr || 'N/A';
+        const dateStr = lastGame?.gameDate
+          ? new Date(lastGame.gameDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
           : 'N/A';
 
         return {
