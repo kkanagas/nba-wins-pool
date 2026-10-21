@@ -6,26 +6,58 @@ export async function GET() {
   try {
     const playerStatsPromises = CANADIAN_PLAYERS.map(async (player) => {
       try {
-        const url = `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/stats`;
-        const res = await fetch(url, { cache: 'no-store' });
+        const res = await fetch(
+          `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/overview`,
+          { cache: 'no-store' }
+        );
 
         if (!res.ok) {
-          console.error(`[Canadians API] Failed for ${player.name} (ID: ${player.id}): Status ${res.status}`);
-          throw new Error(`HTTP error! status: ${res.status}`);
+          throw new Error(`ESPN API returned ${res.status}`);
         }
 
         const data = await res.json();
         
-        // Let's inspect the keys returned by ESPN to ensure our parser matches
-        console.log(`[Canadians API] Success fetching ${player.name}`);
+        // Target the current season regular season statistics block
+        const splits = data?.statistics?.splits || [];
+        // Find the split that represents regular season or current year
+        const currentSplit = splits.find((s: any) => s.season?.year === 2027 || s.type === 'regular') || splits[0];
+        const categories = currentSplit?.categories || [];
+
+        let ppg = '-';
+        let rpg = '-';
+        let apg = '-';
+        let fgPct = '-';
+
+        // Only parse if we are looking at active current stats, otherwise leave as '-'
+        categories.forEach((cat: any) => {
+          cat?.stats?.forEach((stat: any) => {
+            const name = stat?.name?.toLowerCase() || '';
+            const abbrev = stat?.abbreviation?.toUpperCase() || '';
+            const val = stat?.displayValue;
+
+            if (name === 'avgpoints' || abbrev === 'PTS') ppg = val ?? ppg;
+            if (name === 'avgrebounds' || abbrev === 'REB') rpg = val ?? rpg;
+            if (name === 'avgassists' || abbrev === 'AST') apg = val ?? apg;
+            if (name === 'fieldgoalpct' || abbrev === 'FG%') fgPct = val ? (val.includes('%') ? val : `${val}%`) : fgPct;
+          });
+        });
+
+        // Last game info
+        const lastGame = data?.lastGame || {};
+        const lastPts = lastGame?.points ?? '-';
+        const lastReb = lastGame?.rebounds ?? '-';
+        const lastAst = lastGame?.assists ?? '-';
+        const opponent = lastGame?.opponent?.abbreviation || lastGame?.vsTeamAbbr || 'N/A';
+        const dateStr = lastGame?.gameDate
+          ? new Date(lastGame.gameDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : 'N/A';
 
         return {
           ...player,
-          seasonStats: { pts: '12.0', reb: '4.0', ast: '2.0', fgPct: '45.0%' }, // Temporarily testing structure rendering
-          lastGame: { pts: '10', reb: '5', ast: '2', opponent: 'LAL', date: 'Oct 20' },
+          seasonStats: { pts: ppg, reb: rpg, ast: apg, fgPct },
+          lastGame: { pts: lastPts, reb: lastReb, ast: lastAst, opponent, date: dateStr },
         };
-      } catch (err: any) {
-        console.error(`[Canadians API] Error for ${player.name}:`, err.message);
+      } catch (err) {
         return {
           ...player,
           seasonStats: { pts: '-', reb: '-', ast: '-', fgPct: '-' },
