@@ -6,8 +6,9 @@ export async function GET() {
   try {
     const playerStatsPromises = CANADIAN_PLAYERS.map(async (player) => {
       try {
+        // Fetching the explicit stats endpoint with season specifier if needed
         const res = await fetch(
-          `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/overview`,
+          `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/stats`,
           { cache: 'no-store' }
         );
 
@@ -17,32 +18,33 @@ export async function GET() {
 
         const data = await res.json();
         
-        // Target the current season regular season statistics block
-        const splits = data?.statistics?.splits || [];
-        // Find the split that represents regular season or current year
-        const currentSplit = splits.find((s: any) => s.season?.year === 2027 || s.type === 'regular') || splits[0];
-        const categories = currentSplit?.categories || [];
+        // Locate current season categories safely 
+        // ESPN groups stats by splits (e.g. regular season vs preseason)
+        const splits = data?.splits || data?.statistics?.splits || [];
+        const currentSplit = splits.find((s: any) => s.season?.year === 2027 || s.name?.includes('Regular Season')) || splits[0];
+        const categories = currentSplit?.categories || data?.categories || [];
 
         let ppg = '-';
         let rpg = '-';
         let apg = '-';
         let fgPct = '-';
 
-        // Only parse if we are looking at active current stats, otherwise leave as '-'
         categories.forEach((cat: any) => {
           cat?.stats?.forEach((stat: any) => {
             const name = stat?.name?.toLowerCase() || '';
             const abbrev = stat?.abbreviation?.toUpperCase() || '';
             const val = stat?.displayValue;
 
-            if (name === 'avgpoints' || abbrev === 'PTS') ppg = val ?? ppg;
-            if (name === 'avgrebounds' || abbrev === 'REB') rpg = val ?? rpg;
-            if (name === 'avgassists' || abbrev === 'AST') apg = val ?? apg;
-            if (name === 'fieldgoalpct' || abbrev === 'FG%') fgPct = val ? (val.includes('%') ? val : `${val}%`) : fgPct;
+            if (name === 'pointspergame' || name === 'avgpoints' || abbrev === 'PTS') ppg = val ?? ppg;
+            if (name === 'reboundspergame' || name === 'avgrebounds' || abbrev === 'REB') rpg = val ?? rpg;
+            if (name === 'assistspergame' || name === 'avgassists' || abbrev === 'AST') apg = val ?? apg;
+            if (name === 'fieldgoalpercentage' || name === 'fieldgoalpct' || abbrev === 'FG%') {
+              fgPct = val ? (val.includes('%') ? val : `${val}%`) : fgPct;
+            }
           });
         });
 
-        // Last game info
+        // Safely check last game data from the athlete overview/stats payload
         const lastGame = data?.lastGame || {};
         const lastPts = lastGame?.points ?? '-';
         const lastReb = lastGame?.rebounds ?? '-';
