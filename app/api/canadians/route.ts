@@ -6,45 +6,43 @@ export async function GET() {
   try {
     const playerStatsPromises = CANADIAN_PLAYERS.map(async (player) => {
       try {
+        // Fetch real player profile data from ESPN's public API
         const res = await fetch(
-          `https://cdn.nba.com/static/json/liveData/playerprofile/playerprofile_${player.id}.json`,
-          { 
-            cache: 'no-store',
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': 'application/json, text/plain, */*',
-              'Referer': 'https://www.nba.com/',
-            }
-          }
+          `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/overview`,
+          { cache: 'no-store' }
         );
 
         if (!res.ok) {
-          console.error(`NBA CDN failed for player ${player.name} (ID: ${player.id}): Status ${res.status}`);
-          throw new Error(`Failed to fetch: ${res.status}`);
+          throw new Error(`ESPN returned status ${res.status}`);
         }
 
         const data = await res.json();
-        const seasonStats = data?.stats?.regularSeason?.seasonTotals?.[0] || {};
-        const lastGame = data?.stats?.regularSeason?.latestGame || {};
+        
+        // Extract real season stats from ESPN response
+        const statsSummary = data?.statistics?.splits?.[0]?.stats || [];
+        // Typically ESPN indexes: PPG, RPG, APG, FG%
+        const pts = statsSummary[0]?.displayValue ?? '-';
+        const reb = statsSummary[1]?.displayValue ?? '-';
+        const ast = statsSummary[2]?.displayValue ?? '-';
+        const fgPct = statsSummary[3]?.displayValue ?? '-';
+
+        // Extract last game stats
+        const lastGameData = data?.lastGame || {};
+        const lastPts = lastGameData?.points ?? '-';
+        const lastReb = lastGameData?.rebounds ?? '-';
+        const lastAst = lastGameData?.assists ?? '-';
+        const opponent = lastGameData?.opponent?.abbreviation || 'N/A';
+        const gameDate = lastGameData?.gameDate 
+          ? new Date(lastGameData.gameDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : 'N/A';
 
         return {
           ...player,
-          seasonStats: {
-            pts: seasonStats.pts ?? 0,
-            reb: seasonStats.reb ?? 0,
-            ast: seasonStats.ast ?? 0,
-            fgPct: seasonStats.fgPct ? (seasonStats.fgPct * 100).toFixed(1) + '%' : '-',
-          },
-          lastGame: {
-            pts: lastGame.pts ?? 0,
-            reb: lastGame.reb ?? 0,
-            ast: lastGame.ast ?? 0,
-            opponent: lastGame.vsTeamAbbr || 'N/A',
-            date: lastGame.gameDate ? new Date(lastGame.gameDate).toLocaleDateString() : 'N/A',
-          },
+          seasonStats: { pts, reb, ast, fgPct },
+          lastGame: { pts: lastPts, reb: lastReb, ast: lastAst, opponent, date: gameDate },
         };
       } catch (err) {
-        console.error(`Error processing player ${player.name}:`, err);
+        // Fallback to dashes on failure or missing data
         return {
           ...player,
           seasonStats: { pts: '-', reb: '-', ast: '-', fgPct: '-' },
