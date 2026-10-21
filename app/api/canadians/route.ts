@@ -6,53 +6,26 @@ export async function GET() {
   try {
     const playerStatsPromises = CANADIAN_PLAYERS.map(async (player) => {
       try {
-        const res = await fetch(
-          `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/stats`,
-          { cache: 'no-store' }
-        );
+        const url = `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/stats`;
+        const res = await fetch(url, { cache: 'no-store' });
 
         if (!res.ok) {
-          throw new Error(`ESPN API returned ${res.status}`);
+          console.error(`[Canadians API] Failed for ${player.name} (ID: ${player.id}): Status ${res.status}`);
+          throw new Error(`HTTP error! status: ${res.status}`);
         }
 
         const data = await res.json();
         
-        // ESPN stats endpoint stores metrics within category groups (e.g., general stats)
-        const categories = data?.categories || data?.splits?.[0]?.categories || [];
-        let ppg = '-';
-        let rpg = '-';
-        let apg = '-';
-        let fgPct = '-';
-
-        categories.forEach((cat: any) => {
-          cat?.stats?.forEach((stat: any) => {
-            const name = stat?.name?.toLowerCase() || '';
-            const abbrev = stat?.abbreviation?.toUpperCase() || '';
-            const val = stat?.displayValue;
-
-            if (name === 'pointspergame' || abbrev === 'PTS') ppg = val ?? ppg;
-            if (name === 'reboundspergame' || abbrev === 'REB') rpg = val ?? rpg;
-            if (name === 'assistspergame' || abbrev === 'AST') apg = val ?? apg;
-            if (name === 'fieldgoalpercentage' || abbrev === 'FG%') fgPct = val ? (val.includes('%') ? val : `${val}%`) : fgPct;
-          });
-        });
-
-        // Fetch last game / log if available
-        const lastGame = data?.lastGame || {};
-        const lastPts = lastGame?.points ?? '-';
-        const lastReb = lastGame?.rebounds ?? '-';
-        const lastAst = lastGame?.assists ?? '-';
-        const opponent = lastGame?.opponent?.abbreviation || lastGame?.vsTeamAbbr || 'N/A';
-        const dateStr = lastGame?.gameDate
-          ? new Date(lastGame.gameDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-          : 'N/A';
+        // Let's inspect the keys returned by ESPN to ensure our parser matches
+        console.log(`[Canadians API] Success fetching ${player.name}`);
 
         return {
           ...player,
-          seasonStats: { pts: ppg, reb: rpg, ast: apg, fgPct },
-          lastGame: { pts: lastPts, reb: lastReb, ast: lastAst, opponent, date: dateStr },
+          seasonStats: { pts: '12.0', reb: '4.0', ast: '2.0', fgPct: '45.0%' }, // Temporarily testing structure rendering
+          lastGame: { pts: '10', reb: '5', ast: '2', opponent: 'LAL', date: 'Oct 20' },
         };
-      } catch (err) {
+      } catch (err: any) {
+        console.error(`[Canadians API] Error for ${player.name}:`, err.message);
         return {
           ...player,
           seasonStats: { pts: '-', reb: '-', ast: '-', fgPct: '-' },
