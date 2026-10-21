@@ -5,50 +5,76 @@ import { CANADIAN_PLAYERS } from '@/data/canadian-players';
 export async function GET() {
   try {
     const playerStatsPromises = CANADIAN_PLAYERS.map(async (player) => {
-      // Default everyone cleanly to dashes first — strictly factual
-      const defaultStats = {
+      const emptyResult = {
         ...player,
         seasonStats: { pts: '-', reb: '-', ast: '-', fgPct: '-' },
         lastGame: { pts: '-', reb: '-', ast: '-', opponent: 'N/A', date: 'N/A' },
       };
 
       try {
+        // Explicitly request season 2027 (2026-27 season) from ESPN's stats endpoint
         const res = await fetch(
-          `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/overview`,
+          `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/stats?season=2027`,
           { cache: 'no-store' }
         );
 
-        if (!res.ok) return defaultStats;
+        if (!res.ok) return emptyResult;
 
         const data = await res.json();
-        const lastGame = data?.lastGame;
+        
+        // Find the regular season split for 2027
+        const splits = data?.splits || data?.statistics?.splits || [];
+        const regularSplit = splits.find((s: any) => s.season?.year === 2027 && (s.type === 'regular' || s.name?.includes('Regular'))) || splits[0];
+        const categories = regularSplit?.categories || data?.categories || [];
 
-        // If there's a verified recent game entry with actual points recorded, populate it.
-        if (lastGame && (lastGame.points !== undefined || lastGame.stats)) {
-          const lastPts = lastGame?.points ?? lastGame?.stats?.find((s: any) => s.name === 'points')?.displayValue ?? '-';
-          const lastReb = lastGame?.rebounds ?? lastGame?.stats?.find((s: any) => s.name === 'rebounds')?.displayValue ?? '-';
-          const lastAst = lastGame?.assists ?? lastGame?.stats?.find((s: any) => s.name === 'assists')?.displayValue ?? '-';
-          const opponent = lastGame?.opponent?.abbreviation || lastGame?.vsTeamAbbr || 'N/A';
-          const dateStr = lastGame?.gameDate
-            ? new Date(lastGame.gameDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-            : 'N/A';
+        let ppg = '-';
+        let rpg = '-';
+        let apg = '-';
+        let fgPct = '-';
 
-          return {
-            ...player,
-            seasonStats: { pts: '-', reb: '-', ast: '-', fgPct: '-' }, // Kept as dashes until season aggregates fully stabilize
-            lastGame: {
-              pts: lastPts,
-              reb: lastReb,
-              ast: lastAst,
-              opponent,
-              date: dateStr,
-            },
-          };
-        }
+        categories.forEach((cat: any) => {
+          cat?.stats?.forEach((stat: any) => {
+            const name = stat?.name?.toLowerCase() || '';
+            const abbrev = stat?.abbreviation?.toUpperCase() || '';
+            const val = stat?.displayValue;
 
-        return defaultStats;
+            if (name === 'pointspergame' || name === 'avgpoints' || abbrev === 'PTS') ppg = val ?? ppg;
+            if (name === 'reboundspergame' || name === 'avgrebounds' || abbrev === 'REB') rpg = val ?? rpg;
+            if (name === 'assistspergame' || name === 'avgassists' || abbrev === 'AST') apg = val ?? apg;
+            if (name === 'fieldgoalpercentage' || name === 'fieldgoalpct' || abbrev === 'FG%') {
+              fgPct = val ? (val.includes('%') ? val : `${val}%`) : fgPct;
+            }
+          });
+        });
+
+        // Parse last game info if available in overview/stats response
+        const lastGame = data?.lastGame || {};
+        const lastPts = lastGame?.points ?? '-';
+        const lastReb = lastGame?.rebounds ?? '-';
+        const lastAst = lastGame?.assists ?? '-';
+        const opponent = lastGame?.opponent?.abbreviation || lastGame?.vsTeamAbbr || 'N/A';
+        const dateStr = lastGame?.gameDate
+          ? new Date(lastGame.gameDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : 'N/A';
+
+        return {
+          ...player,
+          seasonStats: { 
+            pts: ppg, 
+            reb: rpg, 
+            ast: apg, 
+            fgPct: fgPct !== '-' && !fgPct.includes('%') ? `${fgPct}%` : fgPct 
+          },
+          lastGame: { 
+            pts: lastPts, 
+            reb: lastReb, 
+            ast: lastAst, 
+            opponent, 
+            date: dateStr 
+          },
+        };
       } catch (err) {
-        return defaultStats;
+        return emptyResult;
       }
     });
 
