@@ -8,11 +8,19 @@ export async function GET() {
       try {
         const res = await fetch(
           `https://cdn.nba.com/static/json/liveData/playerprofile/playerprofile_${player.id}.json`,
-          { cache: 'no-store' } // Bypasses cache to ensure fresh data on refresh
+          { 
+            cache: 'no-store',
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': 'application/json, text/plain, */*',
+              'Referer': 'https://www.nba.com/',
+            }
+          }
         );
 
         if (!res.ok) {
-          throw new Error('Failed to fetch');
+          console.error(`NBA CDN failed for player ${player.name} (ID: ${player.id}): Status ${res.status}`);
+          throw new Error(`Failed to fetch: ${res.status}`);
         }
 
         const data = await res.json();
@@ -36,6 +44,7 @@ export async function GET() {
           },
         };
       } catch (err) {
+        console.error(`Error processing player ${player.name}:`, err);
         return {
           ...player,
           seasonStats: { pts: '-', reb: '-', ast: '-', fgPct: '-' },
@@ -47,6 +56,7 @@ export async function GET() {
     const results = await Promise.all(playerStatsPromises);
     return NextResponse.json(results);
   } catch (error) {
+    console.error('Fatal error in Canadians API route:', error);
     return NextResponse.json({ error: 'Failed to fetch Canadian player stats' }, { status: 500 });
   }
 }
