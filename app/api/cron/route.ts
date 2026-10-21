@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 
 const ROSTERS = [
-  { owner: 'Diriye', teamNames: ['Oklahoma City', 'LA Lakers', 'Denver', 'Dallas', 'Golden State', 'Sacramento'] },
-  { owner: 'Jack', teamNames: ['San Antonio', 'Boston', 'Cleveland', 'Utah', 'Washington', 'Brooklyn'] },
-  { owner: 'James', teamNames: ['New York', 'Houston', 'Miami', 'Atlanta', 'Charlotte', 'Milwaukee'] },
-  { owner: 'Jash', teamNames: ['Philadelphia', 'Minnesota', 'Portland', 'Phoenix', 'New Orleans', 'Chicago'] },
-  { owner: 'Karthik', teamNames: ['Detroit', 'Toronto', 'Indiana', 'Orlando', 'Memphis', 'LA Clippers'] },
+  { owner: 'Diriye', teamNames: ['Pistons', 'Lakers', 'Nuggets', 'Mavericks', 'Warriors', 'Kings'] },
+  { owner: 'Jack', teamNames: ['Spurs', 'Celtics', 'Cavaliers', 'Jazz', 'Wizards', 'Nets'] },
+  { owner: 'James', teamNames: ['Knicks', 'Rockets', 'Heat', 'Hawks', 'Hornets', 'Bucks'] },
+  { owner: 'Jash', teamNames: ['76ers', 'Timberwolves', 'Trail Blazers', 'Suns', 'Pelicans', 'Bulls'] },
+  { owner: 'Karthik', teamNames: ['Thunder', 'Raptors', 'Pacers', 'Magic', 'Grizzlies', 'Clippers'] },
 ];
 
 export async function GET(request: Request) {
@@ -19,9 +19,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Fetch NBA Standings from ESPN to get accurate cumulative wins/losses
     const response = await fetch(
-      'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings',
+      'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard',
       { cache: 'no-store' }
     );
 
@@ -33,25 +32,30 @@ export async function GET(request: Request) {
     const teamWins: Record<string, number> = {};
     const teamLosses: Record<string, number> = {};
 
-    // Parse cumulative standings from ESPN
-    if (data?.children) {
-      data.children.forEach((conference: any) => {
-        const standingsEntries = conference?.standings?.entries || [];
-        standingsEntries.forEach((entry: any) => {
-          const teamName = entry?.team?.name;
-          const stats = entry?.stats || [];
-          const winsStat = stats.find((s: any) => s.name === 'wins' || s.type === 'wins');
-          const lossesStat = stats.find((s: any) => s.name === 'losses' || s.type === 'losses');
+    if (data?.events) {
+      data.events.forEach((event: any) => {
+        const competition = event?.competitions?.[0];
+        const competitors = competition?.competitors || [];
+        const isCompleted = competition?.status?.type?.completed;
 
-          if (teamName) {
-            teamWins[teamName] = winsStat?.value ?? 0;
-            teamLosses[teamName] = lossesStat?.value ?? 0;
-          }
-        });
+        if (isCompleted) {
+          competitors.forEach((competitor: any) => {
+            const teamName = competitor?.team?.name;
+            const winner = competitor?.winner;
+
+            if (teamName) {
+              if (teamWins[teamName] === undefined) teamWins[teamName] = 0;
+              if (teamLosses[teamName] === undefined) teamLosses[teamName] = 0;
+
+              if (winner === true) teamWins[teamName] += 1;
+              else if (winner === false) teamLosses[teamName] += 1;
+            }
+          });
+        }
       });
     }
 
-    const todayDateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
+    const todayDateStr = "Oct 21";
 
     const snapshot: Record<string, any> = { date: todayDateStr };
     ROSTERS.forEach((roster) => {

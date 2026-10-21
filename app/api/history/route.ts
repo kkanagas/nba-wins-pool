@@ -9,14 +9,15 @@ export async function GET() {
       return NextResponse.json([]);
     }
 
-    const historyArray = Object.entries(hashData).map(([dateKey, val]) => {
+    const historyArray = Object.entries(hashData).map(([date, val]) => {
       const snapshot = typeof val === 'string' ? JSON.parse(val) : val;
-
       return {
-        date: dateKey,
+        date,
         ...(typeof snapshot === 'object' && snapshot !== null ? snapshot : {}),
       };
     });
+
+    historyArray.sort((a, b) => a.date.localeCompare(b.date));
 
     return NextResponse.json(historyArray);
   } catch (error) {
