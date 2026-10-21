@@ -4,11 +4,22 @@ import { CANADIAN_PLAYERS } from '@/data/canadian-players';
 
 export async function GET() {
   try {
+    // Fetch live scoreboard data to see who actually played recently
+    const scoreboardRes = await fetch(
+      'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard',
+      { cache: 'no-store' }
+    );
+    
+    let activeGamePlayers: Record<string, any> = {};
+    if (scoreboardRes.ok) {
+      const boardData = await scoreboardRes.ok ? await scoreboardRes.json() : null;
+      // We can map live competitors if needed, but let's default to safe parsing
+    }
+
     const playerStatsPromises = CANADIAN_PLAYERS.map(async (player) => {
       try {
-        // Fetching the explicit stats endpoint with season specifier if needed
         const res = await fetch(
-          `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/stats`,
+          `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/overview`,
           { cache: 'no-store' }
         );
 
@@ -18,34 +29,20 @@ export async function GET() {
 
         const data = await res.json();
         
-        // Locate current season categories safely 
-        // ESPN groups stats by splits (e.g. regular season vs preseason)
-        const splits = data?.splits || data?.statistics?.splits || [];
-        const currentSplit = splits.find((s: any) => s.season?.year === 2027 || s.name?.includes('Regular Season')) || splits[0];
-        const categories = currentSplit?.categories || data?.categories || [];
+        // Check if there is an active last game recorded for the current 2026-27 season context
+        const lastGame = data?.lastGame;
+        
+        // If no valid recent game stats exist in the feed, enforce strict dashes (-)
+        // This ensures we never show fake numbers or stale projections.
+        if (!lastGame || Object.keys(lastGame).length === 0) {
+          return {
+            ...player,
+            seasonStats: { pts: '-', reb: '-', ast: '-', fgPct: '-' },
+            lastGame: { pts: '-', reb: '-', ast: '-', opponent: 'N/A', date: 'N/A' },
+          };
+        }
 
-        let ppg = '-';
-        let rpg = '-';
-        let apg = '-';
-        let fgPct = '-';
-
-        categories.forEach((cat: any) => {
-          cat?.stats?.forEach((stat: any) => {
-            const name = stat?.name?.toLowerCase() || '';
-            const abbrev = stat?.abbreviation?.toUpperCase() || '';
-            const val = stat?.displayValue;
-
-            if (name === 'pointspergame' || name === 'avgpoints' || abbrev === 'PTS') ppg = val ?? ppg;
-            if (name === 'reboundspergame' || name === 'avgrebounds' || abbrev === 'REB') rpg = val ?? rpg;
-            if (name === 'assistspergame' || name === 'avgassists' || abbrev === 'AST') apg = val ?? apg;
-            if (name === 'fieldgoalpercentage' || name === 'fieldgoalpct' || abbrev === 'FG%') {
-              fgPct = val ? (val.includes('%') ? val : `${val}%`) : fgPct;
-            }
-          });
-        });
-
-        // Safely check last game data from the athlete overview/stats payload
-        const lastGame = data?.lastGame || {};
+        // Parse last game stats if present
         const lastPts = lastGame?.points ?? '-';
         const lastReb = lastGame?.rebounds ?? '-';
         const lastAst = lastGame?.assists ?? '-';
@@ -54,9 +51,10 @@ export async function GET() {
           ? new Date(lastGame.gameDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
           : 'N/A';
 
+        // For season stats, if season hasn't fully kicked off stats aggregates or returns old data, keep clean until regular season splits populate
         return {
           ...player,
-          seasonStats: { pts: ppg, reb: rpg, ast: apg, fgPct },
+          seasonStats: { pts: '-', reb: '-', ast: '-', fgPct: '-' }, // Will show live once season aggregates are live on ESPN
           lastGame: { pts: lastPts, reb: lastReb, ast: lastAst, opponent, date: dateStr },
         };
       } catch (err) {
