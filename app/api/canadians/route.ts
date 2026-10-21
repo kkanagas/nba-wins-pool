@@ -26,17 +26,15 @@ export async function GET() {
         let ast = '-';
         let fgPct = '-';
 
-        // 1. Season Averages Parsing (handles Averages, Totals, or top-level statistics)
+        // 1. Season Averages
         const seasonTypes = data?.seasonTypes || [];
         const regSeason = seasonTypes.find(
           (st: any) => String(st?.id) === '2' || st?.name?.toLowerCase().includes('regular')
         ) || seasonTypes[0];
 
-        // Search categories inside seasonTypes or fallback to top-level categories/statistics
         const categories = regSeason?.categories || data?.categories || [];
-        
+
         if (Array.isArray(categories) && categories.length > 0) {
-          // Find Averages first, then Totals, or take the first category
           const statCat =
             categories.find((c: any) => c?.name === 'averages' || c?.displayName?.toLowerCase().includes('average')) ||
             categories.find((c: any) => c?.name === 'totals' || c?.displayName?.toLowerCase().includes('total')) ||
@@ -58,21 +56,31 @@ export async function GET() {
           }
         }
 
-        // 2. Recent Game Box Score Parsing
+        // 2. Recent Game Box Score
         let lastGame = { pts: '-', reb: '-', ast: '-', opponent: 'N/A', date: 'N/A' };
         const rawEvents = data?.events || regSeason?.events || [];
 
         if (Array.isArray(rawEvents) && rawEvents.length > 0) {
           const latest = rawEvents[0];
 
-          let lastPts = latest?.points ?? latest?.pts;
-          let lastReb = latest?.rebounds ?? latest?.reb;
-          let lastAst = latest?.assists ?? latest?.ast;
+          // Detailed log for Shai to inspect exact keys
+          if (player.id === 4278077) {
+            console.log('SGA Event[0] Raw Keys:', Object.keys(latest));
+            console.log('SGA Event[0] Full Data:', JSON.stringify(latest));
+          }
 
-          const labels = (latest?.labels || data?.labels || []).map((l: string) => String(l).toUpperCase());
+          // Search direct key variations
+          let lastPts = latest?.points ?? latest?.pts ?? latest?.stats?.points;
+          let lastReb = latest?.rebounds ?? latest?.reb ?? latest?.stats?.rebounds;
+          let lastAst = latest?.assists ?? latest?.ast ?? latest?.stats?.assists;
+
+          // Search labels/stats array if direct keys were missing
+          const labels = (latest?.labels || data?.labels || regSeason?.labels || []).map((l: string) =>
+            String(l).toUpperCase()
+          );
           const statsValues = latest?.stats || latest?.statsValues || [];
 
-          if (Array.isArray(labels) && Array.isArray(statsValues)) {
+          if ((lastPts == null || lastReb == null || lastAst == null) && Array.isArray(labels) && Array.isArray(statsValues)) {
             const pIdx = labels.indexOf('PTS');
             const rIdx = labels.indexOf('REB');
             const aIdx = labels.indexOf('AST');
@@ -101,7 +109,7 @@ export async function GET() {
           };
         }
 
-        // Fallback: If seasonStats are still dashes but lastGame has stats, use lastGame as season baseline
+        // Season stats fallback sync
         if (pts === '-' && lastGame.pts !== '-') {
           pts = lastGame.pts;
           reb = lastGame.reb;
