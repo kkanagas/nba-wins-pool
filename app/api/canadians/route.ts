@@ -42,7 +42,7 @@ export async function GET() {
           if (val !== undefined) {
             if (name === 'pts' || name === 'points' || name === 'pointspergame') pts = String(val);
             if (name === 'reb' || name === 'rebounds' || name === 'reboundspergame') reb = String(val);
-            if (name === 'ast' , name === 'assists' || name === 'assistspergame') ast = String(val);
+            if (name === 'ast' || name === 'assists' || name === 'assistspergame') ast = String(val);
             if (name === 'fgpct' || name === 'fieldgoalpercentage') fgPct = String(val);
           }
         };
