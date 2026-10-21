@@ -20,7 +20,7 @@ export async function GET() {
 
         if (!res.ok) return emptyResult;
 
-        const data = vawait res.json();
+        const data = await res.json();
         
         // Extract statistics from overview payload structure
         const statsSummary = data?.statisticsSummary || data?.seasonStatistics || {};
@@ -45,11 +45,6 @@ export async function GET() {
             }
           });
         });
-
-        // Fallback check if top-level averages exist in overview
-        if (ppg === '-' && data?.generals) {
-          // parse from generals if available
-        }
 
         const lastGame = data?.lastGame || data?.events?.[0] || {};
         const lastPts = lastGame?.points ?? lastGame?.statWins ?? '-';
