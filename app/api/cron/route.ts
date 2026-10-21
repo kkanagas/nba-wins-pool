@@ -55,10 +55,10 @@ export async function GET(request: Request) {
       });
     }
 
-    const todayDate = new Date().toISOString().split('T')[0]; // "2026-10-21"
+    // Format date as "Oct 21" to maintain compatibility with frontend logic
+    const todayDateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
 
-    // Map raw team stats to pool owners
-    const snapshot: Record<string, any> = {};
+    const snapshot: Record<string, any> = { date: todayDateStr };
     ROSTERS.forEach((roster) => {
       const wins = roster.teamNames.reduce((sum, team) => sum + (teamWins[team] || 0), 0);
       const losses = roster.teamNames.reduce((sum, team) => sum + (teamLosses[team] || 0), 0);
@@ -66,14 +66,13 @@ export async function GET(request: Request) {
       snapshot[`${roster.owner}_losses`] = losses;
     });
 
-    // Save owner snapshot to Redis hash
     await kv.hset('nba_wins_history', {
-      [todayDate]: JSON.stringify(snapshot),
+      [todayDateStr]: JSON.stringify(snapshot),
     });
 
     return NextResponse.json({
       success: true,
-      date: todayDate,
+      date: todayDateStr,
       message: 'Daily snapshot updated successfully in Vercel KV!',
       snapshot,
     });
