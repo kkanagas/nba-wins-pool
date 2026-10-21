@@ -6,35 +6,42 @@ export async function GET() {
   try {
     const playerStatsPromises = CANADIAN_PLAYERS.map(async (player) => {
       try {
-        // Fetch real player profile data from ESPN's public API
         const res = await fetch(
           `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/overview`,
           { cache: 'no-store' }
         );
 
         if (!res.ok) {
-          throw new Error(`ESPN returned status ${res.status}`);
+          throw new Error(`ESPN status ${res.status}`);
         }
 
         const data = await res.json();
         
-        // Extract real season stats from ESPN response
-        const statsSummary = data?.statistics?.splits?.[0]?.stats || [];
-        // Typically ESPN indexes: PPG, RPG, APG, FG%
-        const pts = statsSummary[0]?.displayValue ?? '-';
-        const reb = statsSummary[1]?.displayValue ?? '-';
-        const ast = statsSummary[2]?.displayValue ?? '-';
-        const fgPct = statsSummary[3]?.displayValue ?? '-';
+        // Safely extract statistics categories if present
+        const categories = data?.statistics?.splits?.[0]?.categories || [];
+        let pts = '-';
+        let reb = '-';
+        let ast = '-';
+        let fgPct = '-';
 
-        // Extract last game stats
-        const lastGameData = data?.lastGame || {};
-        const lastPts = lastGameData?.points ?? '-';
-        const lastReb = lastGameData?.rebounds ?? '-';
-        const lastAst = lastGameData?.assists ?? '-';
-        const opponent = lastGameData?.opponent?.abbreviation || 'N/A';
-        const gameDate = lastGameData?.gameDate 
-          ? new Date(lastGameData.gameDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-          : 'N/A';
+        categories.forEach((cat: any) => {
+          if (cat.name === 'general' || cat.stats) {
+            cat.stats?.forEach((stat: any) => {
+              if (stat.name === 'avgPoints') pts = stat.displayValue;
+              if (stat.name === 'avgRebounds') reb = stat.displayValue;
+              if (stat.name === 'avgAssists') ast = stat.displayValue;
+              if (stat.name === 'fieldGoalPct') fgPct = stat.displayValue + '%';
+            });
+          }
+        });
+
+        // Safely extract last game info if present
+        const lg = data?.lastGame;
+        const lastPts = lg?.stats?.find((s: any) => s.name === 'points')?.displayValue ?? lg?.points ?? '-';
+        const lastReb = lg?.stats?.find((s: any) => s.name === 'rebounds')?.displayValue ?? lg?.rebounds ?? '-';
+        const lastAst = lg?.stats?.find((s: any) => s.name === 'assists')?.displayValue ?? lg?.assists ?? '-';
+        const opponent = lg?.opponent?.abbreviation || lg?.vsTeamAbbr || 'N/A';
+        const gameDate = lg?.gameDate ? new Date(lg.gameDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A';
 
         return {
           ...player,
@@ -42,7 +49,6 @@ export async function GET() {
           lastGame: { pts: lastPts, reb: lastReb, ast: lastAst, opponent, date: gameDate },
         };
       } catch (err) {
-        // Fallback to dashes on failure or missing data
         return {
           ...player,
           seasonStats: { pts: '-', reb: '-', ast: '-', fgPct: '-' },
