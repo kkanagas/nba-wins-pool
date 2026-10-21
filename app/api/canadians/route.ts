@@ -12,7 +12,6 @@ export async function GET() {
       };
 
       try {
-        // Query official 2026-27 gamelog feed (season=2027)
         const res = await fetch(
           `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/gamelog?season=2027`,
           { cache: 'no-store' }
@@ -27,17 +26,19 @@ export async function GET() {
         let ast = '-';
         let fgPct = '-';
 
-        // 1. Extract Season Averages from seasonTypes hierarchy
+        // 1. Extract Season Averages from seasonTypes
         const seasonTypes = data?.seasonTypes || [];
-        const regSeason = seasonTypes.find((st: any) => String(st?.id) === '2' || st?.name?.toLowerCase().includes('regular')) || seasonTypes[0];
+        const regSeason = seasonTypes.find(
+          (st: any) => String(st?.id) === '2' || st?.name?.toLowerCase().includes('regular')
+        );
 
-        if (regSeason?.categories) {
+        if (regSeason?.categories && Array.isArray(regSeason.categories)) {
           const avgCat = regSeason.categories.find(
             (c: any) => c?.name === 'averages' || c?.displayName?.toLowerCase().includes('average')
           ) || regSeason.categories[0];
 
           if (avgCat && Array.isArray(avgCat.labels) && Array.isArray(avgCat.stats)) {
-            const labels = avgCat.labels.map((l: string) => l.toUpperCase());
+            const labels = avgCat.labels.map((l: string) => String(l).toUpperCase());
             const stats = avgCat.stats;
 
             const pIdx = labels.indexOf('PTS');
@@ -52,21 +53,23 @@ export async function GET() {
           }
         }
 
-        // 2. Extract Most Recent Game Box Score from events array
+        // 2. Extract Recent Game Box Score safely
         let lastGame = { pts: '-', reb: '-', ast: '-', opponent: 'N/A', date: 'N/A' };
-        
-        const events = data?.events || regSeason?.events || [];
+        const rawEvents = data?.events || [];
 
-        if (events.length > 0) {
-          const latest = events[0];
-          const labels = (latest?.labels || data?.labels || regSeason?.labels || []).map((l: string) => l.toUpperCase());
+        // Check if rawEvents actually contains game logs (has gameDate/opponent)
+        const gameEvents = rawEvents.filter((e: any) => e?.gameDate || e?.opponent || e?.vsTeamAbbr);
+
+        if (gameEvents.length > 0) {
+          const latest = gameEvents[0];
+          const labels = (latest?.labels || data?.labels || []).map((l: string) => String(l).toUpperCase());
           const statsValues = latest?.stats || latest?.statsValues || [];
 
           let lastPts = latest?.points;
           let lastReb = latest?.rebounds;
           let lastAst = latest?.assists;
 
-          if (Array.isArray(labels) && Array.isArray(statsValues)) {
+          if (Array.isArray(labels) && Array.isArray(statsValues) && statsValues.length > 0) {
             const pIdx = labels.indexOf('PTS');
             const rIdx = labels.indexOf('REB');
             const aIdx = labels.indexOf('AST');
