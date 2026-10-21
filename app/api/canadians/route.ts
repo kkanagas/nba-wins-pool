@@ -4,7 +4,6 @@ import { CANADIAN_PLAYERS } from '@/data/canadian-players';
 
 // Force dynamic execution so Next.js never caches an empty static response
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 export async function GET() {
   const apiKey = process.env.BALLDONTLIE_API_KEY;
@@ -87,7 +86,7 @@ export async function GET() {
           }
         }
 
-        // Fallback: If season averages are not yet calculated (e.g., played only 1 game), sync from last game
+        // Fallback: If season averages are not yet calculated, sync from last game
         if (seasonStats.pts === '-' && lastGame.pts !== '-') {
           seasonStats = {
             pts: lastGame.pts,
