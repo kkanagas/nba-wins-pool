@@ -20,55 +20,37 @@ export async function GET() {
         if (!res.ok) return emptyResult;
 
         const data = await res.json();
-        
-        // Categories live directly on data.categories based on our log schema inspection
         const categories = data?.categories || [];
-        
+
         let pts = '-';
         let reb = '-';
         let ast = '-';
         let fgPct = '-';
 
-        categories.forEach((cat: any) => {
-          const labels = cat?.labels || [];
-          // Stats can be in 'stats' array or nested under display values
-          const statsValues = cat?.stats || cat?.totals || [];
+        // Find the specific 'averages' category to ensure we get per-game numbers, not cumulative totals
+        const averagesCat = categories.find((cat: any) => cat?.name === 'averages');
 
-          // Sometimes stats are formatted as an array of values mapping 1:1 to labels
-          labels.forEach((label: string, index: number) => {
-            const val = statsValues[index];
-            if (val !== undefined && val !== null) {
-              const upperLabel = label.toUpperCase();
-              if (upperLabel === 'PTS') pts = String(val);
-              if (upperLabel === 'REB') reb = String(val);
-              if (upperLabel === 'AST') ast = String(val);
-              if (upperLabel === 'FG%') fgPct = String(val);
-            }
-          });
+        if (averagesCat && Array.isArray(averagesCat.labels) && Array.isArray(averagesCat.stats)) {
+          const labels = averagesCat.labels.map((l: string) => l.toUpperCase());
+          const stats = averagesCat.stats;
 
-          // Alternatively, if stats is an array of objects with name/displayValue properties
-          if (Array.isArray(statsValues)) {
-            statsValues.forEach((statItem: any) => {
-              if (statItem && typeof statItem === 'object') {
-                const name = (statItem.name || statItem.abbreviation || '').toUpperCase();
-                const displayVal = statItem.displayValue || statItem.value;
-                if (displayVal !== undefined) {
-                  if (name === 'PTS' || name === 'POINTS') pts = String(displayVal);
-                  if (name === 'REB' || name === 'REBOUNDS') reb = String(displayVal);
-                  if (name === 'AST' || name === 'ASSISTS') ast = String(displayVal);
-                  if (name === 'FG%' || name === 'FIELDGOALPERCENTAGE') fgPct = String(displayVal);
-                }
-              }
-            });
-          }
-        });
+          const ptsIndex = labels.indexOf('PTS');
+          const rebIndex = labels.indexOf('REB');
+          const astIndex = labels.indexOf('AST');
+          const fgIndex = labels.indexOf('FG%');
 
-        // Parse last game details if available in the response feed
-        const lastGame = data?.lastGame || data?.events?.[0] || {};
+          if (ptsIndex !== -1 && stats[ptsIndex] != null) pts = String(stats[ptsIndex]);
+          if (rebIndex !== -1 && stats[rebIndex] != null) reb = String(stats[rebIndex]);
+          if (astIndex !== -1 && stats[astIndex] != null) ast = String(stats[astIndex]);
+          if (fgIndex !== -1 && stats[fgIndex] != null) fgPct = String(stats[fgIndex]);
+        }
+
+        // Parse last game summary if available
+        const lastGame = data?.lastGame || {};
         const lastPts = lastGame?.points ?? '-';
         const lastReb = lastGame?.rebounds ?? '-';
         const lastAst = lastGame?.assists ?? '-';
-        const opponent = lastGame?.opponent?.abbreviation || lastGame?.vsTeamAbbr || 'N/A';
+        const opponent = lastGame?.opponent?.abbreviation || 'N/A';
         const dateStr = lastGame?.gameDate
           ? new Date(lastGame.gameDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
           : 'N/A';
