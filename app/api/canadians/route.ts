@@ -20,32 +20,49 @@ export async function GET() {
         if (!res.ok) return emptyResult;
 
         const data = await res.json();
-        const categories = data?.categories || [];
+        
+        // ESPN stores per-season splits under seasonTypes[].categories[] or directly under categories[]
+        let categories: any[] = [];
+        if (Array.isArray(data?.seasonTypes)) {
+          // Flatten categories from all active season types (Regular Season preferred)
+          for (const st of data.seasonTypes) {
+            if (Array.isArray(st?.categories)) {
+              categories.push(...st.categories);
+            }
+          }
+        }
+        if (categories.length === 0 && Array.isArray(data?.categories)) {
+          categories = data.categories;
+        }
 
         let pts = '-';
         let reb = '-';
         let ast = '-';
         let fgPct = '-';
 
-        // Find the specific 'averages' category to ensure we get per-game numbers, not cumulative totals
-        const averagesCat = categories.find((cat: any) => cat?.name === 'averages');
+        // Find category containing per-game averages
+        const avgCat = categories.find((c: any) => {
+          const name = (c?.name || c?.displayName || '').toLowerCase();
+          return name.includes('average') || name === 'averages';
+        }) || categories[0];
 
-        if (averagesCat && Array.isArray(averagesCat.labels) && Array.isArray(averagesCat.stats)) {
-          const labels = averagesCat.labels.map((l: string) => l.toUpperCase());
-          const stats = averagesCat.stats;
+        if (avgCat && Array.isArray(avgCat.labels)) {
+          const labels = avgCat.labels.map((l: string) => l.toUpperCase());
+          // Stats values can be in avgCat.stats or inside a totals/values array
+          const statsValues = Array.isArray(avgCat.stats) ? avgCat.stats : (avgCat.totals || []);
 
-          const ptsIndex = labels.indexOf('PTS');
-          const rebIndex = labels.indexOf('REB');
-          const astIndex = labels.indexOf('AST');
-          const fgIndex = labels.indexOf('FG%');
+          const ptsIdx = labels.indexOf('PTS');
+          const rebIdx = labels.indexOf('REB');
+          const astIdx = labels.indexOf('AST');
+          const fgIdx = labels.indexOf('FG%');
 
-          if (ptsIndex !== -1 && stats[ptsIndex] != null) pts = String(stats[ptsIndex]);
-          if (rebIndex !== -1 && stats[rebIndex] != null) reb = String(stats[rebIndex]);
-          if (astIndex !== -1 && stats[astIndex] != null) ast = String(stats[astIndex]);
-          if (fgIndex !== -1 && stats[fgIndex] != null) fgPct = String(stats[fgIndex]);
+          if (ptsIdx !== -1 && statsValues[ptsIdx] !== undefined) pts = String(statsValues[ptsIdx]);
+          if (rebIdx !== -1 && statsValues[rebIdx] !== undefined) reb = String(statsValues[rebIdx]);
+          if (astIdx !== -1 && statsValues[astIdx] !== undefined) ast = String(statsValues[astIdx]);
+          if (fgIdx !== -1 && statsValues[fgIdx] !== undefined) fgPct = String(statsValues[fgIdx]);
         }
 
-        // Parse last game summary if available
+        // Parse last game boxscore summary if present
         const lastGame = data?.lastGame || {};
         const lastPts = lastGame?.points ?? '-';
         const lastReb = lastGame?.rebounds ?? '-';
