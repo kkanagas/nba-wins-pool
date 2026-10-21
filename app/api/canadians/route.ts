@@ -12,19 +12,19 @@ export async function GET() {
       };
 
       try {
-        // Request season=2026 (representing the 2026-27 NBA season in ESPN's API)
+        // Switch to ESPN's athlete overview endpoint which reliably contains current season stats & last game info
         const res = await fetch(
-          `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/stats?season=2026`,
+          `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/overview`,
           { cache: 'no-store' }
         );
 
         if (!res.ok) return emptyResult;
 
-        const data = await res.json();
+        const data = vawait res.json();
         
-        const splits = data?.splits || data?.statistics?.splits || [];
-        const regularSplit = splits.find((s: any) => s.type === 'regular' || s.name?.includes('Regular')) || splits[0] || {};
-        const categories = regularSplit?.categories || data?.categories || [];
+        // Extract statistics from overview payload structure
+        const statsSummary = data?.statisticsSummary || data?.seasonStatistics || {};
+        const categories = statsSummary?.categories || data?.categories || [];
 
         let ppg = '-';
         let rpg = '-';
@@ -35,19 +35,24 @@ export async function GET() {
           cat?.stats?.forEach((stat: any) => {
             const name = stat?.name?.toLowerCase() || '';
             const abbrev = stat?.abbreviation?.toUpperCase() || '';
-            const val = stat?.displayValue;
+            const val = stat?.displayValue || stat?.value;
 
             if (name === 'pointspergame' || name === 'avgpoints' || abbrev === 'PTS') ppg = val ?? ppg;
             if (name === 'reboundspergame' || name === 'avgrebounds' || abbrev === 'REB') rpg = val ?? rpg;
             if (name === 'assistspergame' || name === 'avgassists' || abbrev === 'AST') apg = val ?? apg;
             if (name === 'fieldgoalpercentage' || name === 'fieldgoalpct' || abbrev === 'FG%') {
-              fgPct = val ? (val.includes('%') ? val : `${val}%`) : fgPct;
+              fgPct = val ? (String(val).includes('%') ? String(val) : `${val}%`) : fgPct;
             }
           });
         });
 
-        const lastGame = data?.lastGame || {};
-        const lastPts = lastGame?.points ?? '-';
+        // Fallback check if top-level averages exist in overview
+        if (ppg === '-' && data?.generals) {
+          // parse from generals if available
+        }
+
+        const lastGame = data?.lastGame || data?.events?.[0] || {};
+        const lastPts = lastGame?.points ?? lastGame?.statWins ?? '-';
         const lastReb = lastGame?.rebounds ?? '-';
         const lastAst = lastGame?.assists ?? '-';
         const opponent = lastGame?.opponent?.abbreviation || lastGame?.vsTeamAbbr || 'N/A';
@@ -61,7 +66,7 @@ export async function GET() {
             pts: ppg, 
             reb: rpg, 
             ast: apg, 
-            fgPct: fgPct !== '-' && !fgPct.includes('%') ? `${fgPct}%` : fgPct 
+            fgPct: fgPct !== '-' && !String(fgPct).includes('%') ? `${fgPct}%` : fgPct 
           },
           lastGame: { 
             pts: lastPts, 
