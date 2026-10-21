@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
+    // Fetch official NBA standings to get true cumulative season wins/losses
     const response = await fetch(
       'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings',
       { cache: 'no-store' }
@@ -29,7 +30,7 @@ export async function GET() {
         const wins = stats.find((s: any) => s.name === 'wins')?.value ?? 0;
         const losses = stats.find((s: any) => s.name === 'losses')?.value ?? 0;
 
-        // Map all potential naming keys used in your rosters and aliases
+        // Map all name variations so your roster lookups find them instantly
         [teamName, location, displayName, abbrev].forEach((name) => {
           if (name) {
             teamWins[name] = wins;
